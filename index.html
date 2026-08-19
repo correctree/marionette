@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — MEDIAPIPE FIX</title>
+<title>PHYSICS MARIONETTE — OFFICIAL MEDIAPIPE LOAD</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -114,33 +114,26 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
   </div>
 
   <div class="section small">
-    物理演算：Verlet積分＋距離制約。糸は粒子列、人形の骨格は固定長制約です。
+    MediaPipeは公式Webガイド準拠の vision_bundle.mjs + WASM 構成です。物理演算はVerlet積分＋距離制約。
   </div>
 </aside>
 
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">10 FINGERS → PHYSICAL STRINGS → FIXED-LENGTH SKELETON</div>
+  <div id="badge">OFFICIAL MEDIAPIPE LOAD ・ 10 FINGERS → PHYSICAL STRINGS</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
 
 <script type="module">
-const MP_VERSION="0.10.22";
-const MP_BASE=`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
+import {
+  HandLandmarker,
+  FilesetResolver
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs";
+
 const MODEL="https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
-const WASM=`${MP_BASE}/wasm`;
-
-let HandLandmarker, FilesetResolver;
-
-async function loadMediaPipeBundle(){
-  const mod=await import(`${MP_BASE}/vision_bundle.js`);
-  const vision=mod.default || mod;
-  HandLandmarker=vision.HandLandmarker || mod.HandLandmarker;
-  FilesetResolver=vision.FilesetResolver || mod.FilesetResolver;
-  if(!HandLandmarker || !FilesetResolver) throw new Error("MediaPipe browser bundle export error");
-}
+const WASM="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm";
 
 const $=id=>document.getElementById(id);
 const video=$("video"), canvas=$("canvas"), ctx=canvas.getContext("2d");
@@ -176,40 +169,38 @@ addEventListener("resize",resize);resize();
 
 async function init(){
   try{
-    mpStatus.textContent="BUNDLE";
-    loading.textContent="LOADING MEDIAPIPE BROWSER BUNDLE...";
-    await loadMediaPipeBundle();
-
     mpStatus.textContent="WASM";
     loading.textContent="LOADING MEDIAPIPE WASM...";
     const vision=await FilesetResolver.forVisionTasks(WASM);
-    const common={
-      runningMode:"VIDEO",numHands:2,
+
+    mpStatus.textContent="MODEL";
+    loading.textContent="LOADING HAND LANDMARKER MODEL...";
+    landmarker=await HandLandmarker.createFromOptions(vision,{
+      baseOptions:{
+        modelAssetPath:MODEL,
+        delegate:"CPU"
+      },
+      runningMode:"VIDEO",
+      numHands:2,
       minHandDetectionConfidence:.45,
       minHandPresenceConfidence:.45,
       minTrackingConfidence:.45
-    };
-    try{
-      mpStatus.textContent="GPU";
-      loading.textContent="INITIALIZING HAND LANDMARKER (GPU)...";
-      landmarker=await HandLandmarker.createFromOptions(vision,{
-        ...common,baseOptions:{modelAssetPath:MODEL,delegate:"GPU"}
-      });
-    }catch(gpuErr){
-      console.warn("GPU failed; using CPU.",gpuErr);
-      mpStatus.textContent="CPU FALLBACK";
-      loading.textContent="GPU FAILED — RETRYING WITH CPU...";
-      landmarker=await HandLandmarker.createFromOptions(vision,{
-        ...common,baseOptions:{modelAssetPath:MODEL,delegate:"CPU"}
-      });
-    }
-    mpStatus.textContent="READY";dot(mpDot,true);
-    start.disabled=false;start.textContent="CAMERA START";loading.style.display="none";
+    });
+
+    mpStatus.textContent="READY";
+    dot(mpDot,true);
+    start.disabled=false;
+    start.textContent="CAMERA START";
+    loading.style.display="none";
   }catch(err){
-    console.error("MediaPipe initialization error:",err);
+    console.error("MediaPipe init failed:",err);
     mpStatus.textContent="LOAD ERROR";
-    loading.innerHTML="MEDIAPIPE LOAD ERROR<br><span style=\"font-size:10px;opacity:.7\">DevTools Console に詳細を表示</span>";
     start.textContent="MEDIAPIPE ERROR";
+    loading.innerHTML=
+      "MEDIAPIPE LOAD ERROR<br>" +
+      "<span style=\"font-size:10px;opacity:.72\">" +
+      (err && err.message ? err.message : String(err)) +
+      "</span>";
   }
 }
 
@@ -476,7 +467,7 @@ function loop(now){
 
   if(video.currentTime!==lastVideoTime){
     try{
-      const result=landmarker.detectForVideo(video,performance.now());
+      const result=landmarker.detectForVideo(video);
       updateHands(result);frameCount++;
       if(now-fpsClock>=1000){
         fpsEl.textContent=Math.round(frameCount*1000/(now-fpsClock));frameCount=0;fpsClock=now;
