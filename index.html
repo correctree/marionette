@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — TENSION ONLY</title>
+<title>PHYSICS MARIONETTE — OPEN HAND DEFAULT</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -64,7 +64,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <div id="app">
 <aside>
   <h1>PHYSICS MARIONETTE</h1>
-  <p>10本の指先から糸を垂らし、張ったときだけ糸が人形を引きます。糸は押す力を持たず、手足は重力ですぐ垂れます。顔と背骨は自立し、腕と脚の骨長は固定です。</p>
+  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。人差し指＝手、中指＝肘、薬指＝膝、小指＝足、親指＝頭。糸は張力だけを伝え、腕と脚の骨長は固定です。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -91,7 +91,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
     <div class="row"><label>DAMPING</label><output id="dampingOut">0.985</output></div>
     <input id="damping" type="range" min="940" max="998" value="982">
     <div class="row"><label>STRING SLACK</label><output id="slackOut">1.18</output></div>
-    <input id="slack" type="range" min="100" max="145" value="110">
+    <input id="slack" type="range" min="100" max="135" value="106">
     <div class="row"><label>STRING SEGMENTS</label><output id="segmentsOut">9</output></div>
     <input id="segments" type="range" min="5" max="14" value="9">
     <div class="row"><label>CONSTRAINTS</label><output id="iterationsOut">8</output></div>
@@ -121,7 +121,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">TENSION-ONLY STRING ・ FIXED BONES ・ REAL GRAVITY</div>
+  <div id="badge">OPEN HAND DEFAULT ・ RING→KNEE ・ PINKY→FOOT</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -366,7 +366,7 @@ function makeString(key,bodyKey){
   const target=body[bodyKey];
 
   // Shorter starting length than the previous version.
-  const anchor=new Particle(target.x,target.y-250,true,0.25);
+  const anchor=new Particle(target.x,target.y-235,true,0.25);
   const particles=[anchor];
 
   const straight=Math.max(120,Math.hypot(anchor.x-target.x,anchor.y-target.y));
