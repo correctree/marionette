@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE — FINGER CONTROL 7X</title>
+<title>FINGER BEND MARIONETTE — VERTICAL ARMS 7X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -132,7 +132,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">OPEN HAND = NEUTRAL ・ FINGER CONTROL ・ MOTION ×7</div>
+  <div id="badge">OPEN HAND = ARMS STRAIGHT DOWN ・ FINGER CONTROL ・ MOTION ×7</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -375,8 +375,9 @@ function drawPuppet(W,H){
   // Neutral: arms slightly down, legs straight.
   // Index: raises whole hand/forearm target.
   // Middle: raises elbow specifically.
-  const lBaseElbowAng=Math.PI*.78;
-  const rBaseElbowAng=Math.PI*.22;
+  // Neutral pose: both arms hang completely vertically downward.
+  const lBaseElbowAng=Math.PI/2;
+  const rBaseElbowAng=Math.PI/2;
 
   const lElbowLift=ctrl.LM*1.10*amp;
   const rElbowLift=ctrl.RM*1.10*amp;
@@ -388,8 +389,8 @@ function drawPuppet(W,H){
   const rElbow=pFromPolar(shoulderR,upperArm,rBaseElbowAng-rElbowLift);
 
   // Bending the index finger raises the hand.
-  const lForeAng=lBaseElbowAng + .10 + lHandLift;
-  const rForeAng=rBaseElbowAng - .10 - rHandLift;
+  const lForeAng=Math.PI/2 + lHandLift;
+  const rForeAng=Math.PI/2 - rHandLift;
   const lHand=pFromPolar(lElbow,foreArm,lForeAng);
   const rHand=pFromPolar(rElbow,foreArm,rForeAng);
 
