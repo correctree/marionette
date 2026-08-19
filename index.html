@@ -3,481 +3,512 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>APRILTAG MARIONETTE — 2CM TAG</title>
+<title>10 FINGER MARIONETTE</title>
 <style>
 :root{
-  --bg:#08090b; --panel:rgba(18,19,23,.94); --line:#32343c;
-  --text:#f5f5f6; --muted:#9699a3; --good:#67e58b; --warn:#ffcb66;
+  --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
+  --text:#f4f4f5; --muted:#9699a3; --good:#66e48a; --warn:#ffd36a;
 }
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{overflow:hidden}
-#app{height:100%;display:grid;grid-template-columns:330px 1fr}
+#app{width:100%;height:100%;display:grid;grid-template-columns:330px 1fr}
 aside{
-  position:relative;z-index:5;padding:18px;background:var(--panel);
-  border-right:1px solid var(--line);overflow:auto;backdrop-filter:blur(16px)
+  position:relative;z-index:10;padding:18px;background:var(--panel);
+  border-right:1px solid var(--line);overflow:auto;backdrop-filter:blur(14px)
 }
-h1{font-size:18px;letter-spacing:.1em;margin:0 0 7px}
-h2{font-size:11px;letter-spacing:.12em;color:#c7c8cf;margin:0 0 10px}
-p{font-size:12px;line-height:1.65;color:var(--muted);margin:0}
-.section{border-top:1px solid var(--line);padding-top:15px;margin-top:16px}
-button,a.btn{
-  display:block;width:100%;border:1px solid var(--line);border-radius:10px;
-  padding:11px 12px;margin:6px 0;background:#1e2026;color:var(--text);
-  text-decoration:none;cursor:pointer;font-weight:650;text-align:center;font-size:12px
+main{position:relative;min-width:0;background:#040507}
+h1{font-size:17px;letter-spacing:.10em;margin:0 0 7px}
+h2{font-size:11px;letter-spacing:.12em;color:#c8cad0;margin:0 0 9px}
+p{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
+.section{border-top:1px solid var(--line);padding-top:14px;margin-top:15px}
+button{
+  width:100%;padding:11px 12px;margin:6px 0;border:1px solid var(--line);
+  background:#1f2127;color:#fff;border-radius:10px;font-weight:700;cursor:pointer
 }
-button.primary{background:#f4f4f5;color:#111}
+button.primary{background:#f3f3f4;color:#101114}
 button:disabled{opacity:.45;cursor:default}
-.row{display:flex;align-items:center;gap:9px;margin:8px 0}
-.row label{width:95px;font-size:11px;color:#d7d8dc}
-input[type=number]{width:64px;background:#0d0e11;color:#fff;border:1px solid var(--line);
-  border-radius:7px;padding:7px}
+.row{display:flex;align-items:center;gap:10px;margin:9px 0}
+.row label{width:105px;font-size:11px;color:#d8d9de}
+.row output{margin-left:auto;font-size:11px;color:#c9cad0}
 input[type=range]{width:100%}
-.check{font-size:11px;color:#ccc;display:block;margin:8px 0}
+.check{display:block;font-size:11px;color:#d3d4d8;margin:8px 0}
 .status{font-size:11px;color:var(--muted);line-height:1.8}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:#555}
-.dot.good{background:var(--good);box-shadow:0 0 9px rgba(103,229,139,.6)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:7px}
+.dot.good{background:var(--good);box-shadow:0 0 8px rgba(102,228,138,.55)}
 .dot.warn{background:var(--warn)}
-.tagCards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tagCard{
-  background:#fff;color:#111;border-radius:10px;padding:9px;text-align:center;font-size:10px
+.map{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#c8c9ce
 }
-.tagCard img{
-  display:block;width:100%;aspect-ratio:1;object-fit:contain;image-rendering:pixelated;
-  background:#fff;margin-bottom:6px
-}
-main{position:relative;min-width:0;background:#050608}
-#view{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-video,#process{display:none}
-#badge{
-  position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:3;
-  padding:8px 13px;border:1px solid rgba(255,255,255,.14);border-radius:999px;
-  background:rgba(0,0,0,.48);backdrop-filter:blur(10px);font-size:11px;pointer-events:none
-}
+.map div{border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#121318}
+.map b{color:#fff}
 .small{font-size:10px;color:#7f828c;line-height:1.55}
-strong{color:#eee}
-@media(max-width:800px){
+video{display:none}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#badge{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  z-index:4;background:rgba(0,0,0,.52);border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;padding:8px 13px;font-size:11px;backdrop-filter:blur(10px);
+  pointer-events:none
+}
+#loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#aaa;font-size:12px;letter-spacing:.08em;pointer-events:none
+}
+@media(max-width:820px){
   #app{display:block}
-  aside{position:absolute;top:10px;left:10px;width:min(320px,calc(100vw - 20px));
-    max-height:57vh;border:1px solid var(--line);border-radius:14px}
+  aside{
+    position:absolute;left:10px;top:10px;width:min(320px,calc(100vw - 20px));
+    max-height:56vh;border:1px solid var(--line);border-radius:14px
+  }
 }
 </style>
 </head>
 <body>
 <div id="app">
 <aside>
-  <h1>APRILTAG MARIONETTE</h1>
-  <p>左右の棒に <strong>tag36h11</strong> のAprilTagを1枚ずつ付け、IDと位置を追跡して人形の両腕を動かします。<br><strong>2cmタグ向け高解像度検出版</strong>です。</p>
+  <h1>10 FINGER MARIONETTE</h1>
+  <p>両手10本の指先を9本の仮想糸として使い、頭・両手・両肘・両膝・両足を操作します。人形側にはIKと慣性を加えます。</p>
 
-  <button id="start" class="primary" disabled>DETECTOR LOADING...</button>
+  <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
   <div class="section">
-    <h2>TAG ASSIGN</h2>
-    <div class="row"><label>LEFT STICK</label><input id="leftId" type="number" min="0" value="0"><span>ID</span></div>
-    <div class="row"><label>RIGHT STICK</label><input id="rightId" type="number" min="0" value="1"><span>ID</span></div>
-    <div class="tagCards">
-      <div class="tagCard">
-        <img src="https://raw.githubusercontent.com/AprilRobotics/apriltag-imgs/master/tag36h11/tag36_11_00000.png" alt="AprilTag ID 0">
-        LEFT / ID 0
-      </div>
-      <div class="tagCard">
-        <img src="https://raw.githubusercontent.com/AprilRobotics/apriltag-imgs/master/tag36h11/tag36_11_00001.png" alt="AprilTag ID 1">
-        RIGHT / ID 1
-      </div>
+    <h2>FINGER → PUPPET</h2>
+    <div class="map">
+      <div><b>左 親指</b><br>HEAD</div>
+      <div><b>右 親指</b><br>HEAD</div>
+      <div><b>左 人差し指</b><br>LEFT HAND</div>
+      <div><b>右 人差し指</b><br>RIGHT HAND</div>
+      <div><b>左 中指</b><br>LEFT ELBOW</div>
+      <div><b>右 中指</b><br>RIGHT ELBOW</div>
+      <div><b>左 薬指</b><br>LEFT KNEE</div>
+      <div><b>右 薬指</b><br>RIGHT KNEE</div>
+      <div><b>左 小指</b><br>LEFT FOOT</div>
+      <div><b>右 小指</b><br>RIGHT FOOT</div>
     </div>
-    <a class="btn" target="_blank" rel="noopener"
-       href="https://github.com/AprilRobotics/apriltag-imgs/tree/master/tag36h11">OPEN OFFICIAL TAGS</a>
-    <div class="small">2cm程度のタグを想定しています。白い余白を切り落とさず、マットな紙に高コントラストで印刷してください。小さいタグほどカメラに近い距離での使用が安定します。</div>
+    <div class="small" style="margin-top:8px">頭は左右親指の中点で操作するため、10本の指から9本の糸になります。</div>
   </div>
 
   <div class="section">
     <h2>MOTION</h2>
-    <div class="row"><label>SMOOTHING</label><span id="smoothText">0.20</span></div>
-    <input id="smooth" type="range" min="5" max="60" value="20">
-    <div class="row"><label>ARM RANGE</label><span id="rangeText">1.00</span></div>
-    <input id="range" type="range" min="60" max="150" value="100">
+    <div class="row"><label>INERTIA</label><output id="inertiaOut">0.82</output></div>
+    <input id="inertia" type="range" min="55" max="94" value="82">
+    <div class="row"><label>RESPONSE</label><output id="responseOut">0.16</output></div>
+    <input id="response" type="range" min="5" max="35" value="16">
+    <div class="row"><label>CONTROL RANGE</label><output id="rangeOut">0.82</output></div>
+    <input id="controlRange" type="range" min="55" max="110" value="82">
   </div>
 
   <div class="section">
     <label class="check"><input id="showCamera" type="checkbox" checked> CAMERA IMAGE</label>
-    <label class="check"><input id="showTags" type="checkbox" checked> TAG OUTLINE / ID</label>
-    <label class="check"><input id="showStrings" type="checkbox" checked> MARIONETTE STRINGS</label>
+    <label class="check"><input id="showHands" type="checkbox" checked> FINGERTIPS</label>
+    <label class="check"><input id="showStrings" type="checkbox" checked> 9 STRINGS</label>
+    <label class="check"><input id="swapHands" type="checkbox"> LEFT / RIGHT を入れ替える</label>
   </div>
 
   <div class="section status">
-    <div><span id="detDot" class="dot"></span>DETECTOR: <span id="detStatus">LOADING</span></div>
+    <div><span id="mpDot" class="dot"></span>MEDIAPIPE: <span id="mpStatus">LOADING</span></div>
     <div><span id="camDot" class="dot"></span>CAMERA: <span id="camStatus">OFF</span></div>
-    <div><span id="leftDot" class="dot"></span>LEFT: <span id="leftStatus">WAIT</span></div>
-    <div><span id="rightDot" class="dot"></span>RIGHT: <span id="rightStatus">WAIT</span></div>
-    <div>DETECTION: <span id="fps">0</span> fps</div>
-    <div>PROCESS: <span>960 × 720</span></div>
+    <div><span id="leftDot" class="dot"></span>LEFT HAND: <span id="leftStatus">WAIT</span></div>
+    <div><span id="rightDot" class="dot"></span>RIGHT HAND: <span id="rightStatus">WAIT</span></div>
+    <div>TRACKING: <span id="fps">0</span> fps</div>
   </div>
 
   <div class="section small">
-    このHTML自体は1ファイルですが、AprilTag検出器のJavaScript/WASMとComlinkをオンラインから読み込みます。<br>2cmタグ検出のため内部解析を960×720にしています。通常版よりCPU負荷は高くなります。
-    カメラ利用にはHTTPSまたはlocalhostが必要です。
+    カメラ利用にはHTTPSまたはlocalhostが必要です。両手全体と10本の指先がカメラ内に入るようにしてください。
   </div>
 </aside>
 
 <main>
   <video id="video" autoplay muted playsinline></video>
-  <canvas id="process" width="960" height="720"></canvas>
-  <canvas id="view"></canvas>
-  <div id="badge">2CM TAG MODE ・ ID 0 = LEFT ・ ID 1 = RIGHT</div>
+  <canvas id="canvas"></canvas>
+  <div id="badge">10 FINGERS → 9 STRINGS → MARIONETTE</div>
+  <div id="loading">MEDIAPIPE HAND LANDMARKER INITIALIZING...</div>
 </main>
 </div>
 
-<script>
-(async()=>{
-  'use strict';
+<script type="module">
+import {
+  HandLandmarker,
+  FilesetResolver
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 
-  const BASE = 'https://arenaxr.github.io/apriltag-js-standalone/';
-  const WORKER_JS = BASE + 'apriltag.js';
-  const WASM_JS = BASE + 'apriltag_wasm.js';
-  const WASM_BIN = BASE + 'apriltag_wasm.wasm';
-  const COMLINK_ESM = 'https://unpkg.com/comlink/dist/esm/comlink.mjs';
+const MODEL =
+  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const WASM =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 
-  const $=id=>document.getElementById(id);
-  const video=$('video'), processCanvas=$('process'), pctx=processCanvas.getContext('2d',{willReadFrequently:true});
-  const view=$('view'), ctx=view.getContext('2d');
-  const startBtn=$('start');
+const $ = id => document.getElementById(id);
+const video = $("video");
+const canvas = $("canvas");
+const ctx = canvas.getContext("2d");
+const start = $("start");
 
-  const leftId=$('leftId'), rightId=$('rightId');
-  const smooth=$('smooth'), range=$('range');
-  const smoothText=$('smoothText'), rangeText=$('rangeText');
-  const showCamera=$('showCamera'), showTags=$('showTags'), showStrings=$('showStrings');
+const inertiaEl = $("inertia");
+const responseEl = $("response");
+const rangeEl = $("controlRange");
+const showCamera = $("showCamera");
+const showHands = $("showHands");
+const showStrings = $("showStrings");
+const swapHands = $("swapHands");
 
-  const detDot=$('detDot'), camDot=$('camDot'), leftDot=$('leftDot'), rightDot=$('rightDot');
-  const detStatus=$('detStatus'), camStatus=$('camStatus'), leftStatus=$('leftStatus'), rightStatus=$('rightStatus');
-  const fpsEl=$('fps');
+const mpDot=$("mpDot"), camDot=$("camDot"), leftDot=$("leftDot"), rightDot=$("rightDot");
+const mpStatus=$("mpStatus"), camStatus=$("camStatus"), leftStatus=$("leftStatus"), rightStatus=$("rightStatus");
+const fpsEl=$("fps"), loading=$("loading");
 
-  let detector=null, worker=null, stream=null, running=false, detecting=false;
-  let latestDetections=[];
-  let detectCount=0, detectClock=performance.now();
-  let lastDetectRequest=0;
-  const DETECT_INTERVAL=70; // ~14fps detector; display rendering remains smooth
+function bindOut(el,out,scale=100){
+  const f=()=>$(out).textContent=(+el.value/scale).toFixed(2);
+  el.addEventListener("input",f); f();
+}
+bindOut(inertiaEl,"inertiaOut");
+bindOut(responseEl,"responseOut");
+bindOut(rangeEl,"rangeOut");
 
-  const state={
-    left:{x:null,y:null,angle:0,lastSeen:0},
-    right:{x:null,y:null,angle:0,lastSeen:0}
+function dot(el,on){el.classList.toggle("good",!!on)}
+
+let landmarker=null, stream=null, running=false, lastVideoTime=-1;
+let latest=null, frameCount=0, fpsClock=performance.now();
+
+const TIP = {thumb:4,index:8,middle:12,ring:16,pinky:20};
+
+const hands = {
+  Left:null,
+  Right:null
+};
+
+function resize(){
+  const r=canvas.getBoundingClientRect();
+  const d=Math.min(devicePixelRatio||1,2);
+  canvas.width=Math.max(1,Math.round(r.width*d));
+  canvas.height=Math.max(1,Math.round(r.height*d));
+  ctx.setTransform(d,0,0,d,0,0);
+}
+addEventListener("resize",resize); resize();
+
+async function init(){
+  try{
+    const vision = await FilesetResolver.forVisionTasks(WASM);
+    landmarker = await HandLandmarker.createFromOptions(vision,{
+      baseOptions:{
+        modelAssetPath:MODEL,
+        delegate:"GPU"
+      },
+      runningMode:"VIDEO",
+      numHands:2,
+      minHandDetectionConfidence:0.45,
+      minHandPresenceConfidence:0.45,
+      minTrackingConfidence:0.45
+    });
+    mpStatus.textContent="READY";
+    dot(mpDot,true);
+    start.disabled=false;
+    start.textContent="CAMERA START";
+    loading.style.display="none";
+  }catch(err){
+    console.error(err);
+    mpStatus.textContent="LOAD ERROR";
+    loading.textContent="MEDIAPIPE LOAD ERROR";
+    start.textContent="LOAD ERROR";
+  }
+}
+
+start.addEventListener("click",async()=>{
+  if(running)return;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},
+      audio:false
+    });
+    video.srcObject=stream;
+    await video.play();
+    running=true;
+    camStatus.textContent="ON"; dot(camDot,true);
+    start.textContent="RUNNING"; start.disabled=true;
+    requestAnimationFrame(loop);
+  }catch(err){
+    console.error(err);
+    camStatus.textContent="ERROR";
+    alert("カメラを起動できません。HTTPS / localhost とカメラ権限を確認してください。\\n\\n"+err.message);
+  }
+});
+
+function mirrorPoint(lm,W,H){
+  return {x:(1-lm.x)*W,y:lm.y*H,z:lm.z||0};
+}
+
+function updateHands(result){
+  hands.Left=null; hands.Right=null;
+  if(!result?.landmarks)return;
+  for(let i=0;i<result.landmarks.length;i++){
+    const cat=result.handedness?.[i]?.[0];
+    if(!cat)continue;
+    let side=cat.categoryName;
+    if(swapHands.checked) side=side==="Left"?"Right":"Left";
+    hands[side]=result.landmarks[i];
+  }
+}
+
+class SpringPoint{
+  constructor(x=0,y=0){
+    this.x=x; this.y=y; this.vx=0; this.vy=0; this.ready=false;
+  }
+  step(tx,ty){
+    if(tx==null||ty==null)return;
+    if(!this.ready){this.x=tx;this.y=ty;this.ready=true}
+    const response=+responseEl.value/100;
+    const inertia=+inertiaEl.value/100;
+    this.vx=(this.vx+(tx-this.x)*response)*inertia;
+    this.vy=(this.vy+(ty-this.y)*response)*inertia;
+    this.x+=this.vx;
+    this.y+=this.vy;
+  }
+}
+
+const P={
+  head:new SpringPoint(),
+  lh:new SpringPoint(), le:new SpringPoint(),
+  rh:new SpringPoint(), re:new SpringPoint(),
+  lk:new SpringPoint(), lf:new SpringPoint(),
+  rk:new SpringPoint(), rf:new SpringPoint()
+};
+
+function finger(side,name,W,H){
+  const h=hands[side];
+  if(!h)return null;
+  return mirrorPoint(h[TIP[name]],W,H);
+}
+
+function mapControl(p,W,H){
+  if(!p)return null;
+  const amp=+rangeEl.value/100;
+  return {
+    x:W*.5+(p.x-W*.5)*amp,
+    y:H*.5+(p.y-H*.5)*amp
+  };
+}
+
+function updateTargets(W,H){
+  const lThumb=mapControl(finger("Left","thumb",W,H),W,H);
+  const rThumb=mapControl(finger("Right","thumb",W,H),W,H);
+
+  let head=null;
+  if(lThumb&&rThumb)head={x:(lThumb.x+rThumb.x)/2,y:(lThumb.y+rThumb.y)/2};
+  else head=lThumb||rThumb;
+
+  const raw={
+    head,
+    lh:mapControl(finger("Left","index",W,H),W,H),
+    le:mapControl(finger("Left","middle",W,H),W,H),
+    lk:mapControl(finger("Left","ring",W,H),W,H),
+    lf:mapControl(finger("Left","pinky",W,H),W,H),
+    rh:mapControl(finger("Right","index",W,H),W,H),
+    re:mapControl(finger("Right","middle",W,H),W,H),
+    rk:mapControl(finger("Right","ring",W,H),W,H),
+    rf:mapControl(finger("Right","pinky",W,H),W,H)
   };
 
-  smooth.oninput=()=>smoothText.textContent=(+smooth.value/100).toFixed(2);
-  range.oninput=()=>rangeText.textContent=(+range.value/100).toFixed(2);
+  for(const k in raw) if(raw[k]) P[k].step(raw[k].x,raw[k].y);
+  return raw;
+}
 
-  function setDot(dot,mode){
-    dot.classList.remove('good','warn');
-    if(mode) dot.classList.add(mode);
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function norm(x,y){const d=Math.hypot(x,y)||1;return{x:x/d,y:y/d}}
+
+function twoBoneIK(root,target,guide,L1,L2,side){
+  const dx=target.x-root.x,dy=target.y-root.y;
+  const d=clamp(Math.hypot(dx,dy),2,L1+L2-1);
+  const base=Math.atan2(dy,dx);
+  const ca=clamp((L1*L1+d*d-L2*L2)/(2*L1*d),-1,1);
+  const a=Math.acos(ca);
+
+  const e1={
+    x:root.x+Math.cos(base+a)*L1,
+    y:root.y+Math.sin(base+a)*L1
+  };
+  const e2={
+    x:root.x+Math.cos(base-a)*L1,
+    y:root.y+Math.sin(base-a)*L1
+  };
+
+  if(guide?.ready){
+    const d1=(e1.x-guide.x)**2+(e1.y-guide.y)**2;
+    const d2=(e2.x-guide.x)**2+(e2.y-guide.y)**2;
+    return d1<d2?e1:e2;
   }
+  return side==="L"?e1:e2;
+}
 
-  function resize(){
-    const r=view.getBoundingClientRect(), d=Math.min(devicePixelRatio||1,2);
-    view.width=Math.max(1,Math.round(r.width*d));
-    view.height=Math.max(1,Math.round(r.height*d));
-    ctx.setTransform(d,0,0,d,0,0);
+function drawCamera(W,H){
+  if(!showCamera.checked){
+    ctx.fillStyle="#050608";ctx.fillRect(0,0,W,H);return;
   }
-  addEventListener('resize',resize); resize();
+  ctx.save();
+  ctx.translate(W,0);ctx.scale(-1,1);
+  ctx.drawImage(video,0,0,W,H);
+  ctx.restore();
+  ctx.fillStyle="rgba(0,0,0,.43)";
+  ctx.fillRect(0,0,W,H);
+}
 
-  async function initDetector(){
+const handConnections=[
+ [0,1],[1,2],[2,3],[3,4],
+ [0,5],[5,6],[6,7],[7,8],
+ [5,9],[9,10],[10,11],[11,12],
+ [9,13],[13,14],[14,15],[15,16],
+ [13,17],[17,18],[18,19],[19,20],[0,17]
+];
+
+function drawHand(side,W,H){
+  if(!showHands.checked||!hands[side])return;
+  const pts=hands[side].map(p=>mirrorPoint(p,W,H));
+  ctx.save();
+  ctx.strokeStyle="rgba(255,255,255,.20)";
+  ctx.lineWidth=1.2;
+  for(const [a,b] of handConnections){
+    ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);ctx.stroke();
+  }
+  ctx.fillStyle="rgba(255,255,255,.90)";
+  for(const idx of Object.values(TIP)){
+    const p=pts[idx];ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function controlPointFromSpring(k){return P[k].ready?{x:P[k].x,y:P[k].y}:null}
+
+function drawStrings(raw,joints){
+  if(!showStrings.checked)return;
+  const pairs=[
+    ["head",joints.head],
+    ["lh",joints.lHand],["le",joints.lElbow],
+    ["rh",joints.rHand],["re",joints.rElbow],
+    ["lk",joints.lKnee],["lf",joints.lFoot],
+    ["rk",joints.rKnee],["rf",joints.rFoot]
+  ];
+  ctx.save();
+  ctx.strokeStyle="rgba(255,255,255,.32)";
+  ctx.lineWidth=1.2;
+  for(const [k,j] of pairs){
+    const s=controlPointFromSpring(k);
+    if(!s||!j)continue;
+    ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(j.x,j.y);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPuppet(W,H,raw){
+  const sc=Math.min(W,H)/720;
+
+  // Head target drives the upper body, but the torso follows only partially.
+  const defaultHead={x:W*.60,y:H*.25};
+  const Ht=P.head.ready?{x:P.head.x,y:P.head.y}:defaultHead;
+  const head={
+    x:clamp(Ht.x,W*.22,W*.80),
+    y:clamp(Ht.y,H*.12,H*.44)
+  };
+
+  const neck={x:head.x,y:head.y+54*sc};
+  const chest={x:head.x,y:head.y+120*sc};
+  const pelvis={x:head.x,y:head.y+250*sc};
+
+  const shoulderSpread=72*sc;
+  const hipSpread=43*sc;
+  const LS={x:chest.x-shoulderSpread,y:chest.y-18*sc};
+  const RS={x:chest.x+shoulderSpread,y:chest.y-18*sc};
+  const LH={x:pelvis.x-hipSpread,y:pelvis.y};
+  const RH={x:pelvis.x+hipSpread,y:pelvis.y};
+
+  const fallbackLH={x:LS.x-155*sc,y:LS.y+55*sc};
+  const fallbackRH={x:RS.x+155*sc,y:RS.y+55*sc};
+  const fallbackLF={x:LH.x-25*sc,y:pelvis.y+225*sc};
+  const fallbackRF={x:RH.x+25*sc,y:pelvis.y+225*sc};
+
+  const lHand=P.lh.ready?{x:P.lh.x,y:P.lh.y}:fallbackLH;
+  const rHand=P.rh.ready?{x:P.rh.x,y:P.rh.y}:fallbackRH;
+  const lFoot=P.lf.ready?{x:P.lf.x,y:P.lf.y}:fallbackLF;
+  const rFoot=P.rf.ready?{x:P.rf.x,y:P.rf.y}:fallbackRF;
+
+  const arm1=108*sc,arm2=108*sc;
+  const leg1=120*sc,leg2=125*sc;
+
+  const lElbow=twoBoneIK(LS,lHand,P.le,arm1,arm2,"L");
+  const rElbow=twoBoneIK(RS,rHand,P.re,arm1,arm2,"R");
+  const lKnee=twoBoneIK(LH,lFoot,P.lk,leg1,leg2,"L");
+  const rKnee=twoBoneIK(RH,rFoot,P.rk,leg1,leg2,"R");
+
+  const joints={head,lHand,lElbow,rHand,rElbow,lKnee,lFoot,rKnee,rFoot};
+  drawStrings(raw,joints);
+
+  ctx.save();
+  ctx.lineCap="round";ctx.lineJoin="round";
+  ctx.strokeStyle="rgba(255,255,255,.96)";
+  ctx.fillStyle="#07080a";
+
+  // Head
+  ctx.lineWidth=5*sc;
+  ctx.beginPath();ctx.arc(head.x,head.y,40*sc,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+  // Spine / torso
+  ctx.lineWidth=12*sc;
+  ctx.beginPath();ctx.moveTo(neck.x,neck.y);ctx.lineTo(chest.x,chest.y);ctx.lineTo(pelvis.x,pelvis.y);ctx.stroke();
+
+  // Shoulders and pelvis
+  ctx.lineWidth=10*sc;
+  ctx.beginPath();ctx.moveTo(LS.x,LS.y);ctx.lineTo(RS.x,RS.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(LH.x,LH.y);ctx.lineTo(RH.x,RH.y);ctx.stroke();
+
+  // Limbs
+  ctx.lineWidth=13*sc;
+  const limb=(a,b,c)=>{
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.stroke();
+  };
+  limb(LS,lElbow,lHand);
+  limb(RS,rElbow,rHand);
+  limb(LH,lKnee,lFoot);
+  limb(RH,rKnee,rFoot);
+
+  // Joint rings
+  ctx.fillStyle="#07080a";ctx.strokeStyle="#fff";ctx.lineWidth=3.5*sc;
+  [LS,RS,LH,RH,lElbow,rElbow,lKnee,rKnee,lHand,rHand,lFoot,rFoot].forEach(p=>{
+    ctx.beginPath();ctx.arc(p.x,p.y,7.5*sc,0,Math.PI*2);ctx.fill();ctx.stroke();
+  });
+
+  ctx.restore();
+}
+
+function loop(now){
+  if(!running)return;
+  const rect=canvas.getBoundingClientRect(),W=rect.width,H=rect.height;
+
+  if(video.currentTime!==lastVideoTime){
     try{
-      const [Comlink, sourceRes] = await Promise.all([
-        import(COMLINK_ESM),
-        fetch(WORKER_JS,{cache:'force-cache'})
-      ]);
-      if(!sourceRes.ok) throw new Error('AprilTag worker source could not be loaded.');
-      let source=await sourceRes.text();
-
-      // The original worker expects its WASM files beside itself.
-      // Because this single HTML creates the worker from a Blob, replace those
-      // relative paths with absolute hosted paths.
-      source=source.replace(
-        "importScripts('apriltag_wasm.js');",
-        "importScripts('" + WASM_JS + "');"
-      );
-      source=source.replace(
-        "AprilTagWasm().then(function (Module) {",
-        "AprilTagWasm({locateFile:function(p){return p.endsWith('.wasm')?'" + WASM_BIN + "':p;}}).then(function (Module) {"
-      );
-
-      const blob=new Blob([source],{type:'application/javascript'});
-      worker=new Worker(URL.createObjectURL(blob));
-      const Apriltag=Comlink.wrap(worker);
-
-      detector=await new Apriltag(Comlink.proxy(()=>{
-        detStatus.textContent='READY';
-        setDot(detDot,'good');
-        startBtn.disabled=false;
-        startBtn.textContent='CAMERA START';
-      }));
-
-      // We only need 2D center/corners, not camera pose.
-      await detector.set_return_pose(0);
-      await detector.set_return_solutions(0);
-      await detector.set_max_detections(8);
-    }catch(err){
-      console.error(err);
-      detStatus.textContent='LOAD ERROR';
-      setDot(detDot,'warn');
-      startBtn.textContent='DETECTOR ERROR';
-      $('badge').textContent='AprilTag detector could not be loaded';
-    }
-  }
-
-  async function startCamera(){
-    if(running) return;
-    try{
-      stream=await navigator.mediaDevices.getUserMedia({
-        audio:false,
-        video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}
-      });
-      video.srcObject=stream;
-      await video.play();
-      running=true;
-      camStatus.textContent='ON'; setDot(camDot,'good');
-      startBtn.textContent='RUNNING';
-      startBtn.disabled=true;
-      detectLoop();
-      requestAnimationFrame(drawLoop);
-    }catch(err){
-      console.error(err);
-      camStatus.textContent='ERROR'; setDot(camDot,'warn');
-      alert('カメラを起動できません。HTTPS / localhost とブラウザのカメラ権限を確認してください。\\n\\n'+err.message);
-    }
-  }
-  startBtn.onclick=startCamera;
-
-  function grayscaleFrame(){
-    const W=processCanvas.width,H=processCanvas.height;
-    pctx.drawImage(video,0,0,W,H);
-    const rgba=pctx.getImageData(0,0,W,H).data;
-    const gray=new Uint8Array(W*H);
-    for(let i=0,j=0;i<rgba.length;i+=4,j++){
-      // luminance approximation
-      gray[j]=(rgba[i]*77 + rgba[i+1]*150 + rgba[i+2]*29)>>8;
-    }
-    return gray;
-  }
-
-  async function detectLoop(now=performance.now()){
-    if(!running || !detector) return;
-
-    if(detecting || now-lastDetectRequest<DETECT_INTERVAL){
-      if(running) requestAnimationFrame(detectLoop);
-      return;
-    }
-
-    lastDetectRequest=now;
-    detecting=true;
-    try{
-      const gray=grayscaleFrame();
-      const result=await detector.detect(gray,processCanvas.width,processCanvas.height);
-      latestDetections=Array.isArray(result)?result:[];
-      updateTracking(latestDetections);
-      detectCount++;
-
-      const t=performance.now();
-      if(t-detectClock>=1000){
-        fpsEl.textContent=Math.round(detectCount*1000/(t-detectClock));
-        detectCount=0;
-        detectClock=t;
+      latest=landmarker.detectForVideo(video,performance.now());
+      updateHands(latest);
+      frameCount++;
+      if(now-fpsClock>=1000){
+        fpsEl.textContent=Math.round(frameCount*1000/(now-fpsClock));
+        frameCount=0;fpsClock=now;
       }
-    }catch(err){
-      console.error('detect',err);
-    }finally{
-      detecting=false;
-      if(running) requestAnimationFrame(detectLoop);
-    }
+    }catch(err){console.error(err)}
+    lastVideoTime=video.currentTime;
   }
 
-  function orientation(det){
-    if(!det.corners || det.corners.length<2) return 0;
-    const a=det.corners[0], b=det.corners[1];
-    return Math.atan2(b.y-a.y,b.x-a.x);
-  }
+  leftStatus.textContent=hands.Left?"TRACKING":"WAIT";
+  rightStatus.textContent=hands.Right?"TRACKING":"WAIT";
+  dot(leftDot,!!hands.Left);dot(rightDot,!!hands.Right);
 
-  function updateOne(s,det){
-    if(!det) return;
-    const a=+smooth.value/100;
-    // Convert process-canvas coordinates to normalized MIRRORED display coordinates.
-    const nx=1-(det.center.x/processCanvas.width);
-    const ny=det.center.y/processCanvas.height;
-    const ang=Math.PI-orientation(det);
+  ctx.clearRect(0,0,W,H);
+  drawCamera(W,H);
+  drawHand("Left",W,H);
+  drawHand("Right",W,H);
+  const raw=updateTargets(W,H);
+  drawPuppet(W,H,raw);
 
-    if(s.x==null){s.x=nx;s.y=ny;s.angle=ang}
-    else{
-      s.x+=(nx-s.x)*a;
-      s.y+=(ny-s.y)*a;
-      // shortest angular interpolation
-      let d=((ang-s.angle+Math.PI*3)%(Math.PI*2))-Math.PI;
-      s.angle+=d*a;
-    }
-    s.lastSeen=performance.now();
-  }
+  requestAnimationFrame(loop);
+}
 
-  function updateTracking(dets){
-    const L=+leftId.value, R=+rightId.value;
-    updateOne(state.left,dets.find(d=>+d.id===L));
-    updateOne(state.right,dets.find(d=>+d.id===R));
-  }
-
-  function visible(s){return s.x!=null && performance.now()-s.lastSeen<650}
-
-  function drawVideo(W,H){
-    if(!showCamera.checked){
-      ctx.fillStyle='#050608';ctx.fillRect(0,0,W,H);return;
-    }
-    ctx.save();
-    ctx.translate(W,0);ctx.scale(-1,1);
-    ctx.drawImage(video,0,0,W,H);
-    ctx.restore();
-    ctx.fillStyle='rgba(0,0,0,.40)';ctx.fillRect(0,0,W,H);
-  }
-
-  function detectionToScreen(pt,W,H){
-    return {x:W-(pt.x/processCanvas.width)*W,y:(pt.y/processCanvas.height)*H};
-  }
-
-  function drawDetections(W,H){
-    if(!showTags.checked) return;
-    const L=+leftId.value,R=+rightId.value;
-    ctx.save();
-    ctx.lineJoin='round';
-    for(const d of latestDetections){
-      if(!d.corners?.length) continue;
-      const pts=d.corners.map(p=>detectionToScreen(p,W,H));
-      ctx.lineWidth=(+d.id===L||+d.id===R)?4:2;
-      ctx.strokeStyle=(+d.id===L||+d.id===R)?'rgba(255,255,255,.95)':'rgba(255,255,255,.35)';
-      ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
-      for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
-      ctx.closePath();ctx.stroke();
-      const c=detectionToScreen(d.center,W,H);
-      ctx.fillStyle='white';ctx.font='bold 13px system-ui';ctx.textAlign='center';
-      ctx.fillText('ID '+d.id,c.x,c.y-12);
-    }
-    ctx.restore();
-  }
-
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-  function solveArm(S,T,L1,L2,side){
-    const dx=T.x-S.x,dy=T.y-S.y;
-    const d=clamp(Math.hypot(dx,dy),2,L1+L2-2);
-    const base=Math.atan2(dy,dx);
-    const c=clamp((L1*L1+d*d-L2*L2)/(2*L1*d),-1,1);
-    const a=Math.acos(c);
-    const ea=base+(side==='L'?a:-a);
-    return{x:S.x+Math.cos(ea)*L1,y:S.y+Math.sin(ea)*L1};
-  }
-
-  function targetFor(s,W,H,fallback,side){
-    if(!visible(s)) return fallback;
-    const amp=+range.value/100;
-    // Amplify around the centre without causing unlimited reach.
-    let x=W*.5+(s.x-.5)*W*amp;
-    let y=H*.5+(s.y-.5)*H*amp;
-    if(side==='L') x=Math.min(x,W*.56);
-    else x=Math.max(x,W*.44);
-    return{x,y};
-  }
-
-  function drawPuppet(W,H){
-    const sc=Math.min(W,H)/720;
-    const cx=W*.62, cy=H*.47;
-    const head={x:cx,y:cy-112*sc}, hr=40*sc;
-    const LS={x:cx-72*sc,y:cy-48*sc};
-    const RS={x:cx+72*sc,y:cy-48*sc};
-    const hip={x:cx,y:cy+128*sc};
-
-    const LT=targetFor(state.left,W,H,{x:cx-195*sc,y:cy+15*sc},'L');
-    const RT=targetFor(state.right,W,H,{x:cx+195*sc,y:cy+15*sc},'R');
-    const L1=105*sc,L2=105*sc;
-    const LE=solveArm(LS,LT,L1,L2,'L');
-    const RE=solveArm(RS,RT,L1,L2,'R');
-
-    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
-
-    // strings from the detected controllers
-    if(showStrings.checked){
-      ctx.lineWidth=1.2;ctx.strokeStyle='rgba(255,255,255,.30)';
-      if(visible(state.left)){
-        ctx.beginPath();ctx.moveTo(state.left.x*W,state.left.y*H);ctx.lineTo(LT.x,LT.y);ctx.stroke();
-      }
-      if(visible(state.right)){
-        ctx.beginPath();ctx.moveTo(state.right.x*W,state.right.y*H);ctx.lineTo(RT.x,RT.y);ctx.stroke();
-      }
-    }
-
-    // body
-    ctx.strokeStyle='rgba(255,255,255,.96)';
-    ctx.lineWidth=11*sc;
-    ctx.beginPath();ctx.moveTo(cx,cy-23*sc);ctx.lineTo(hip.x,hip.y);ctx.stroke();
-    ctx.lineWidth=10*sc;
-    ctx.beginPath();ctx.moveTo(LS.x,LS.y);ctx.lineTo(RS.x,RS.y);ctx.stroke();
-
-    // head
-    ctx.lineWidth=5*sc;
-    ctx.beginPath();ctx.arc(head.x,head.y,hr,0,Math.PI*2);ctx.stroke();
-
-    // arms
-    ctx.lineWidth=13*sc;
-    ctx.beginPath();ctx.moveTo(LS.x,LS.y);ctx.lineTo(LE.x,LE.y);ctx.lineTo(LT.x,LT.y);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(RS.x,RS.y);ctx.lineTo(RE.x,RE.y);ctx.lineTo(RT.x,RT.y);ctx.stroke();
-
-    // wrist direction from tag rotation
-    ctx.lineWidth=5*sc;
-    if(visible(state.left)){
-      ctx.beginPath();ctx.moveTo(LT.x,LT.y);
-      ctx.lineTo(LT.x+Math.cos(state.left.angle)*34*sc,LT.y+Math.sin(state.left.angle)*34*sc);ctx.stroke();
-    }
-    if(visible(state.right)){
-      ctx.beginPath();ctx.moveTo(RT.x,RT.y);
-      ctx.lineTo(RT.x+Math.cos(state.right.angle)*34*sc,RT.y+Math.sin(state.right.angle)*34*sc);ctx.stroke();
-    }
-
-    // pelvis & passive legs
-    ctx.lineWidth=10*sc;
-    ctx.beginPath();ctx.moveTo(cx-38*sc,hip.y);ctx.lineTo(cx+38*sc,hip.y);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(cx-30*sc,hip.y);ctx.lineTo(cx-55*sc,hip.y+100*sc);ctx.lineTo(cx-74*sc,hip.y+196*sc);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(cx+30*sc,hip.y);ctx.lineTo(cx+55*sc,hip.y+100*sc);ctx.lineTo(cx+74*sc,hip.y+196*sc);ctx.stroke();
-
-    // joint circles
-    ctx.fillStyle='#090a0c';ctx.strokeStyle='white';ctx.lineWidth=3.5*sc;
-    [LS,RS,LE,RE,LT,RT].forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,8*sc,0,Math.PI*2);ctx.fill();ctx.stroke()});
-    ctx.restore();
-  }
-
-  function drawControllerIndicators(W,H){
-    ctx.save();
-    for(const [name,s] of [['L',state.left],['R',state.right]]){
-      if(!visible(s)) continue;
-      const x=s.x*W,y=s.y*H;
-      ctx.translate(x,y);ctx.rotate(s.angle);
-      ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=5;
-      ctx.beginPath();ctx.moveTo(-48,0);ctx.lineTo(48,0);ctx.stroke();
-      ctx.fillStyle='white';ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
-      ctx.setTransform(1,0,0,1,0,0);
-      ctx.fillStyle='white';ctx.font='bold 12px system-ui';ctx.fillText(name,x+10,y-10);
-    }
-    ctx.restore();
-  }
-
-  function drawLoop(){
-    if(!running)return;
-    const rect=view.getBoundingClientRect(),W=rect.width,H=rect.height;
-    ctx.clearRect(0,0,W,H);
-    drawVideo(W,H);
-    drawDetections(W,H);
-    drawControllerIndicators(W,H);
-    drawPuppet(W,H);
-
-    const lv=visible(state.left),rv=visible(state.right);
-    leftStatus.textContent=lv?'TRACKING':'WAIT'; rightStatus.textContent=rv?'TRACKING':'WAIT';
-    setDot(leftDot,lv?'good':null);setDot(rightDot,rv?'good':null);
-    requestAnimationFrame(drawLoop);
-  }
-
-  initDetector();
-})();
+init();
 </script>
 </body>
 </html>
