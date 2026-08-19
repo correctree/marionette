@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MARIONETTE STICK TRACKER</title>
+<style>
+  :root{
+    --bg:#0b0b0c; --panel:#151518; --line:#2b2b31; --txt:#f4f4f5; --sub:#9d9da6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{overflow:hidden}
+  #app{height:100%;display:grid;grid-template-columns:320px 1fr}
+  aside{background:rgba(20,20,23,.97);border-right:1px solid var(--line);padding:18px;overflow:auto;z-index:3}
+  h1{font-size:18px;letter-spacing:.08em;margin:0 0 6px}
+  p{font-size:12px;line-height:1.6;color:var(--sub);margin:0 0 16px}
+  button,.marker{
+    width:100%;border:1px solid var(--line);background:#1d1d22;color:var(--txt);
+    border-radius:10px;padding:11px 12px;margin:5px 0;cursor:pointer;text-align:left
+  }
+  button:hover,.marker:hover{background:#25252b}
+  button.primary{background:#f3f3f4;color:#111;font-weight:700;text-align:center}
+  .marker{display:flex;align-items:center;gap:10px}
+  .swatch{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.6);flex:0 0 auto;background:#777}
+  .marker.active{outline:2px solid #fff}
+  .section{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  label{font-size:12px;color:#d8d8dc}
+  input[type=range]{width:100%}
+  .status{font-size:11px;color:var(--sub);line-height:1.6}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:6px}
+  .ok{background:#72e58f}
+  main{position:relative;min-width:0;background:#050506}
+  video{display:none}
+  canvas{position:absolute;inset:0;width:100%;height:100%}
+  #hint{
+    position:absolute;left:50%;top:20px;transform:translateX(-50%);z-index:2;
+    background:rgba(0,0,0,.55);backdrop-filter:blur(10px);padding:9px 14px;border-radius:999px;
+    font-size:12px;pointer-events:none;border:1px solid rgba(255,255,255,.12)
+  }
+  .small{font-size:10px;color:#85858d}
+  @media(max-width:780px){
+    #app{grid-template-columns:1fr}
+    aside{position:absolute;left:10px;top:10px;width:min(310px,calc(100vw - 20px));max-height:55vh;border:1px solid var(--line);border-radius:14px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <h1>MARIONETTE STICK TRACKER</h1>
+    <p>左右2本の棒に4色のマーカーを付け、Webカメラで追跡します。各色は実物をクリックして登録できます。</p>
+
+    <button id="startBtn" class="primary">CAMERA START</button>
+
+    <div class="section">
+      <label>1. 登録するマーカーを選択 → 2. 画面上の実物マーカーをクリック</label>
+      <div class="marker active" data-key="L1"><span class="swatch" id="swL1"></span><span>LEFT / TIP</span></div>
+      <div class="marker" data-key="L2"><span class="swatch" id="swL2"></span><span>LEFT / END</span></div>
+      <div class="marker" data-key="R1"><span class="swatch" id="swR1"></span><span>RIGHT / TIP</span></div>
+      <div class="marker" data-key="R2"><span class="swatch" id="swR2"></span><span>RIGHT / END</span></div>
+      <div class="small">初期色：蛍光ピンク / シアン / 黄緑 / オレンジ</div>
+    </div>
+
+    <div class="section">
+      <div class="row"><label>COLOR TOLERANCE</label><span id="tolVal">70</span></div>
+      <input id="tol" type="range" min="20" max="150" value="70">
+      <div class="row"><label>SMOOTHING</label><span id="smoothVal">0.22</span></div>
+      <input id="smooth" type="range" min="5" max="60" value="22">
+    </div>
+
+    <div class="section">
+      <label><input id="showTrack" type="checkbox" checked> 検出ポイントと棒を表示</label><br>
+      <label><input id="showCamera" type="checkbox" checked> カメラ映像を表示</label>
+    </div>
+
+    <div class="section status">
+      <div><span id="camDot" class="dot"></span>CAMERA: <span id="camStatus">OFF</span></div>
+      <div><span id="lDot" class="dot"></span>LEFT STICK: <span id="lStatus">WAIT</span></div>
+      <div><span id="rDot" class="dot"></span>RIGHT STICK: <span id="rStatus">WAIT</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div id="hint">色を選び、カメラ画面内のマーカーをクリックして登録</div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently:true });
+  const startBtn = document.getElementById('startBtn');
+  const tol = document.getElementById('tol');
+  const smoothEl = document.getElementById('smooth');
+  const tolVal = document.getElementById('tolVal');
+  const smoothVal = document.getElementById('smoothVal');
+  const showTrack = document.getElementById('showTrack');
+  const showCamera = document.getElementById('showCamera');
+
+  const camDot = document.getElementById('camDot');
+  const lDot = document.getElementById('lDot');
+  const rDot = document.getElementById('rDot');
+  const camStatus = document.getElementById('camStatus');
+  const lStatus = document.getElementById('lStatus');
+  const rStatus = document.getElementById('rStatus');
+
+  const markers = {
+    L1:{r:255,g:35,b:175, x:null,y:null, sx:null,sy:null},
+    L2:{r:0,g:220,b:255,  x:null,y:null, sx:null,sy:null},
+    R1:{r:120,g:255,b:40, x:null,y:null, sx:null,sy:null},
+    R2:{r:255,g:130,b:20, x:null,y:null, sx:null,sy:null}
+  };
+  let selected = 'L1';
+  let running = false;
+  let stream = null;
+  let lastT = performance.now();
+
+  // Offscreen low-resolution canvas for fast color tracking.
+  const work = document.createElement('canvas');
+  const wctx = work.getContext('2d', {willReadFrequently:true});
+  const WORK_W = 320;
+  const WORK_H = 240;
+  work.width = WORK_W; work.height = WORK_H;
+
+  document.querySelectorAll('.marker').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.marker').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      selected = el.dataset.key;
+    });
+  });
+
+  function updateSwatch(k){
+    const m = markers[k];
+    document.getElementById('sw'+k).style.background = `rgb(${m.r},${m.g},${m.b})`;
+  }
+  Object.keys(markers).forEach(updateSwatch);
+
+  tol.oninput = () => tolVal.textContent = tol.value;
+  smoothEl.oninput = () => smoothVal.textContent = (smoothEl.value/100).toFixed(2);
+
+  async function startCamera(){
+    try{
+      if(stream) stream.getTracks().forEach(t => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:'user', width:{ideal:1280}, height:{ideal:720}},
+        audio:false
+      });
+      video.srcObject = stream;
+      await video.play();
+      running = true;
+      camDot.classList.add('ok'); camStatus.textContent = 'ON';
+      resize();
+      requestAnimationFrame(loop);
+    }catch(err){
+      camStatus.textContent = 'ERROR';
+      alert('カメラを起動できません。HTTPS / localhost とカメラ権限を確認してください。\\n\\n' + err.message);
+    }
+  }
+  startBtn.addEventListener('click', startCamera);
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(rect.width*dpr));
+    canvas.height = Math.max(1, Math.round(rect.height*dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize', resize);
+
+  function drawMirroredVideo(targetCtx, w, h){
+    targetCtx.save();
+    targetCtx.translate(w,0);
+    targetCtx.scale(-1,1);
+    targetCtx.drawImage(video,0,0,w,h);
+    targetCtx.restore();
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    if(!running) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * WORK_W;
+    const y = (e.clientY - rect.top) / rect.height * WORK_H;
+    // Refresh work image so the sampled pixel is current.
+    wctx.clearRect(0,0,WORK_W,WORK_H);
+    drawMirroredVideo(wctx, WORK_W, WORK_H);
+    const px = wctx.getImageData(Math.max(0,Math.min(WORK_W-1,Math.floor(x))), Math.max(0,Math.min(WORK_H-1,Math.floor(y))), 1,1).data;
+    markers[selected].r = px[0]; markers[selected].g = px[1]; markers[selected].b = px[2];
+    updateSwatch(selected);
+  });
+
+  function detectColors(){
+    wctx.clearRect(0,0,WORK_W,WORK_H);
+    drawMirroredVideo(wctx, WORK_W, WORK_H);
+    const img = wctx.getImageData(0,0,WORK_W,WORK_H);
+    const d = img.data;
+    const threshold = +tol.value;
+    const threshold2 = threshold*threshold;
+    const sums = {};
+    for(const k in markers) sums[k] = {x:0,y:0,n:0};
+
+    // Sample every 2 pixels for speed.
+    for(let y=0;y<WORK_H;y+=2){
+      for(let x=0;x<WORK_W;x+=2){
+        const i=(y*WORK_W+x)*4;
+        const r=d[i], g=d[i+1], b=d[i+2];
+        let best=null, bestDist=1e9;
+        for(const k in markers){
+          const m=markers[k];
+          const dr=r-m.r, dg=g-m.g, db=b-m.b;
+          const dist=dr*dr+dg*dg+db*db;
+          if(dist<bestDist){bestDist=dist;best=k}
+        }
+        if(bestDist < threshold2){
+          const s=sums[best]; s.x+=x; s.y+=y; s.n++;
+        }
+      }
+    }
+
+    const a = +smoothEl.value/100;
+    for(const k in markers){
+      const s=sums[k], m=markers[k];
+      if(s.n > 5){
+        m.x=s.x/s.n; m.y=s.y/s.n;
+        if(m.sx==null){m.sx=m.x; m.sy=m.y}
+        m.sx += (m.x-m.sx)*a;
+        m.sy += (m.y-m.sy)*a;
+      }else{
+        m.x=m.y=null;
+      }
+    }
+  }
+
+  function toScreen(m, W, H){
+    if(m.sx==null) return null;
+    return {x:m.sx/WORK_W*W, y:m.sy/WORK_H*H};
+  }
+
+  function pairData(a,b,W,H){
+    const A=toScreen(markers[a],W,H), B=toScreen(markers[b],W,H);
+    if(!A || !B || markers[a].x==null || markers[b].x==null) return null;
+    return {
+      a:A,b:B,
+      cx:(A.x+B.x)/2, cy:(A.y+B.y)/2,
+      angle:Math.atan2(B.y-A.y,B.x-A.x)
+    };
+  }
+
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+  function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+
+  function solveArm(shoulder,target,L1,L2,side){
+    const dx=target.x-shoulder.x, dy=target.y-shoulder.y;
+    const d=clamp(Math.hypot(dx,dy), 1, L1+L2-1);
+    const base=Math.atan2(dy,dx);
+    const cosA=clamp((L1*L1+d*d-L2*L2)/(2*L1*d),-1,1);
+    const a=Math.acos(cosA);
+    // bend elbows slightly downward/outward
+    const elbowAngle=base + (side==='L' ? a : -a);
+    const elbow={x:shoulder.x+Math.cos(elbowAngle)*L1, y:shoulder.y+Math.sin(elbowAngle)*L1};
+    return elbow;
+  }
+
+  function drawPuppet(W,H,left,right){
+    const cx=W*0.60, cy=H*0.48;
+    const scale=Math.min(W,H)/700;
+    const headR=40*scale;
+    const shoulderY=cy-50*scale;
+    const shoulderSpread=70*scale;
+    const hipY=cy+120*scale;
+    const arm1=95*scale, arm2=95*scale;
+
+    const Ls={x:cx-shoulderSpread,y:shoulderY};
+    const Rs={x:cx+shoulderSpread,y:shoulderY};
+
+    // Map tracked stick centers into a generous puppet-control field.
+    const mapTarget=(p,side)=>{
+      if(!p) return side==='L'
+        ? {x:cx-170*scale,y:cy+10*scale}
+        : {x:cx+170*scale,y:cy+10*scale};
+
+      let x = (p.cx/W - .5) * W * .85 + cx;
+      let y = (p.cy/H - .5) * H * .85 + cy;
+      // Keep left/right arms mostly on their own side.
+      if(side==='L') x=Math.min(x,cx-15*scale);
+      else x=Math.max(x,cx+15*scale);
+      return {x,y};
+    };
+
+    const Lt=mapTarget(left,'L'), Rt=mapTarget(right,'R');
+    const Le=solveArm(Ls,Lt,arm1,arm2,'L');
+    const Re=solveArm(Rs,Rt,arm1,arm2,'R');
+
+    ctx.save();
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.strokeStyle='rgba(255,255,255,.95)';
+    ctx.fillStyle='rgba(255,255,255,.95)';
+
+    // strings
+    ctx.lineWidth=1.5;
+    ctx.strokeStyle='rgba(255,255,255,.32)';
+    if(left){ ctx.beginPath();ctx.moveTo(left.cx,left.cy);ctx.lineTo(Lt.x,Lt.y);ctx.stroke(); }
+    if(right){ ctx.beginPath();ctx.moveTo(right.cx,right.cy);ctx.lineTo(Rt.x,Rt.y);ctx.stroke(); }
+
+    // body
+    ctx.strokeStyle='rgba(255,255,255,.95)';
+    ctx.lineWidth=12*scale;
+    ctx.beginPath();ctx.moveTo(cx,cy-20*scale);ctx.lineTo(cx,hipY);ctx.stroke();
+
+    // shoulders
+    ctx.lineWidth=10*scale;
+    ctx.beginPath();ctx.moveTo(Ls.x,Ls.y);ctx.lineTo(Rs.x,Rs.y);ctx.stroke();
+
+    // head
+    ctx.lineWidth=5*scale;
+    ctx.beginPath();ctx.arc(cx,cy-105*scale,headR,0,Math.PI*2);ctx.stroke();
+
+    // arms
+    ctx.lineWidth=13*scale;
+    ctx.beginPath();ctx.moveTo(Ls.x,Ls.y);ctx.lineTo(Le.x,Le.y);ctx.lineTo(Lt.x,Lt.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(Rs.x,Rs.y);ctx.lineTo(Re.x,Re.y);ctx.lineTo(Rt.x,Rt.y);ctx.stroke();
+
+    // hands
+    ctx.fillStyle='white';
+    [Lt,Rt].forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10*scale,0,Math.PI*2);ctx.fill()});
+
+    // pelvis & legs, subtle passive pose
+    ctx.lineWidth=11*scale;
+    ctx.beginPath();ctx.moveTo(cx-38*scale,hipY);ctx.lineTo(cx+38*scale,hipY);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-32*scale,hipY);ctx.lineTo(cx-55*scale,hipY+105*scale);ctx.lineTo(cx-72*scale,hipY+200*scale);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+32*scale,hipY);ctx.lineTo(cx+55*scale,hipY+105*scale);ctx.lineTo(cx+72*scale,hipY+200*scale);ctx.stroke();
+
+    // joints
+    ctx.fillStyle='#0b0b0c';
+    ctx.strokeStyle='white'; ctx.lineWidth=4*scale;
+    [Ls,Rs,Le,Re].forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,8*scale,0,Math.PI*2);ctx.fill();ctx.stroke()});
+    ctx.restore();
+  }
+
+  function drawTracking(W,H,left,right){
+    if(!showTrack.checked) return;
+    const drawPair=(p)=>{
+      if(!p) return;
+      ctx.save();
+      ctx.lineWidth=4;
+      ctx.strokeStyle='rgba(255,255,255,.8)';
+      ctx.beginPath();ctx.moveTo(p.a.x,p.a.y);ctx.lineTo(p.b.x,p.b.y);ctx.stroke();
+      ctx.fillStyle='white';
+      [p.a,p.b].forEach(q=>{ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);ctx.fill()});
+      ctx.restore();
+    };
+    drawPair(left); drawPair(right);
+  }
+
+  function loop(now){
+    if(!running) return;
+    detectColors();
+
+    const rect=canvas.getBoundingClientRect(), W=rect.width, H=rect.height;
+    ctx.clearRect(0,0,W,H);
+
+    if(showCamera.checked){
+      ctx.save();
+      ctx.globalAlpha=.55;
+      ctx.translate(W,0);ctx.scale(-1,1);
+      ctx.drawImage(video,0,0,W,H);
+      ctx.restore();
+      ctx.fillStyle='rgba(0,0,0,.32)';ctx.fillRect(0,0,W,H);
+    }else{
+      ctx.fillStyle='#050506';ctx.fillRect(0,0,W,H);
+    }
+
+    const left=pairData('L1','L2',W,H);
+    const right=pairData('R1','R2',W,H);
+
+    drawTracking(W,H,left,right);
+    drawPuppet(W,H,left,right);
+
+    lStatus.textContent=left?'TRACKING':'WAIT';
+    rStatus.textContent=right?'TRACKING':'WAIT';
+    lDot.classList.toggle('ok',!!left);
+    rDot.classList.toggle('ok',!!right);
+
+    lastT=now;
+    requestAnimationFrame(loop);
+  }
+
+  resize();
+})();
+</script>
+</body>
+</html>
