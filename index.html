@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE — GLOBAL MOVE & INVERT 7X</title>
+<title>FINGER BEND MARIONETTE — FINGER CONTROL 7X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -66,7 +66,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <div id="app">
 <aside>
   <h1>FINGER BEND MARIONETTE</h1>
-  <p>MediaPipe Handsで左右10本の指の屈曲率を計算します。親指で首、人差し指で手、中指で肘、薬指で膝、小指で脚を操作します。両手を開くと全身移動、両手を閉じると逆立ちします。動作倍率は初期値7.00です。</p>
+  <p>MediaPipe Handsで左右10本の指の屈曲率を計算します。親指で首、人差し指で手、中指で肘、薬指で膝、小指で脚を操作します。動作倍率は初期値7.00です。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -79,11 +79,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
       <div><b>薬指</b><br>膝を上げる</div>
       <div><b>小指</b><br>脚を上げる</div>
     </div>
-    <div class="small" style="margin-top:8px">
-      左右は独立です。左手の指は人形の左側、右手の指は人形の右側を操作します。<br>
-      両手を開いて同時に動かす：人形全体を同方向へ移動。<br>
-      両手を閉じて同時に動かす：人形全体を逆立ち状態にします。
-    </div>
+    <div class="small" style="margin-top:8px">左右は独立です。左手の指は人形の左側、右手の指は人形の右側を操作します。</div>
   </div>
 
   <div class="section">
@@ -136,7 +132,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">OPEN = MOVE ・ CLOSED = INVERT ・ MOTION ×7</div>
+  <div id="badge">OPEN HAND = NEUTRAL ・ FINGER CONTROL ・ MOTION ×7</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -285,13 +281,7 @@ const ctrl={
   RT:0,RI:0,RM:0,RR:0,RP:0
 };
 
-// Whole-puppet gesture state.
-let globalPose={
-  x:0,y:0,rot:0,
-  targetX:0,targetY:0,targetRot:0,
-  baseHandX:null,baseHandY:null,
-  mode:"neutral"
-};
+
 
 function updateControls(){
   const targets={
@@ -350,99 +340,11 @@ function pFromPolar(base,len,ang){
 }
 
 
-function palmCenterFromLandmarks(hand,W,H){
-  if(!hand)return null;
-  const ids=[0,5,9,13,17];
-  let x=0,y=0;
-  for(const id of ids){
-    const p=mirrorPoint(hand[id],W,H);
-    x+=p.x;y+=p.y;
-  }
-  return{x:x/ids.length,y:y/ids.length};
-}
-
-function handClosure(side){
-  // Use the four non-thumb fingers for stable open/closed recognition.
-  const vals = side==="Left"
-    ? [ctrl.LI,ctrl.LM,ctrl.LR,ctrl.LP]
-    : [ctrl.RI,ctrl.RM,ctrl.RR,ctrl.RP];
-  return vals.reduce((a,b)=>a+b,0)/vals.length;
-}
-
-function updateGlobalGesture(W,H){
-  const L=palmCenterFromLandmarks(hands.Left,W,H);
-  const R=palmCenterFromLandmarks(hands.Right,W,H);
-  if(!L || !R){
-    globalPose.mode="neutral";
-    globalPose.baseHandX=null;
-    globalPose.baseHandY=null;
-    globalPose.targetRot=0;
-    return;
-  }
-
-  const centerX=(L.x+R.x)/2;
-  const centerY=(L.y+R.y)/2;
-  const lc=handClosure("Left");
-  const rc=handClosure("Right");
-
-  const bothOpen = lc<0.18 && rc<0.18;
-  const bothClosed = lc>0.68 && rc>0.68;
-
-  let newMode="neutral";
-  if(bothClosed)newMode="closed";
-  else if(bothOpen)newMode="open";
-
-  if(newMode!==globalPose.mode){
-    globalPose.mode=newMode;
-    globalPose.baseHandX=centerX;
-    globalPose.baseHandY=centerY;
-
-    // Preserve current translated position as new gesture origin.
-    globalPose.originX=globalPose.x;
-    globalPose.originY=globalPose.y;
-  }
-
-  if(newMode==="open" || newMode==="closed"){
-    if(globalPose.baseHandX==null){
-      globalPose.baseHandX=centerX;
-      globalPose.baseHandY=centerY;
-      globalPose.originX=globalPose.x;
-      globalPose.originY=globalPose.y;
-    }
-
-    // Whole body follows the simultaneous movement of both hands.
-    globalPose.targetX=(globalPose.originX||0)+(centerX-globalPose.baseHandX);
-    globalPose.targetY=(globalPose.originY||0)+(centerY-globalPose.baseHandY);
-  }else{
-    globalPose.targetX=globalPose.x;
-    globalPose.targetY=globalPose.y;
-  }
-
-  // Closed both hands = upside-down puppet.
-  globalPose.targetRot = newMode==="closed" ? Math.PI : 0;
-
-  // Smooth global movement / rotation.
-  globalPose.x += (globalPose.targetX-globalPose.x)*0.16;
-  globalPose.y += (globalPose.targetY-globalPose.y)*0.16;
-
-  let dr=((globalPose.targetRot-globalPose.rot+Math.PI*3)%(Math.PI*2))-Math.PI;
-  globalPose.rot += dr*0.14;
-}
-
 function drawPuppet(W,H){
   const sc=Math.min(W,H)/720;
   const amp=+motionRangeEl.value/100;
 
-  updateGlobalGesture(W,H);
-
   ctx.save();
-  // Translate and rotate the entire puppet around its body center.
-  const pivotX=W*.61;
-  const pivotY=H*.53;
-  ctx.translate(globalPose.x,globalPose.y);
-  ctx.translate(pivotX,pivotY);
-  ctx.rotate(globalPose.rot);
-  ctx.translate(-pivotX,-pivotY);
 
   const cx=W*.61, headY=H*.26;
   const headR=40*sc;
