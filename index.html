@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>10 FINGER MARIONETTE</title>
+<title>PHYSICS MARIONETTE</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
-  --text:#f4f4f5; --muted:#9699a3; --good:#66e48a; --warn:#ffd36a;
+  --text:#f4f4f5; --muted:#9699a3; --good:#66e48a;
 }
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{overflow:hidden}
-#app{width:100%;height:100%;display:grid;grid-template-columns:330px 1fr}
+#app{width:100%;height:100%;display:grid;grid-template-columns:340px 1fr}
 aside{
   position:relative;z-index:10;padding:18px;background:var(--panel);
   border-right:1px solid var(--line);overflow:auto;backdrop-filter:blur(14px)
@@ -30,22 +30,19 @@ button{
 button.primary{background:#f3f3f4;color:#101114}
 button:disabled{opacity:.45;cursor:default}
 .row{display:flex;align-items:center;gap:10px;margin:9px 0}
-.row label{width:105px;font-size:11px;color:#d8d9de}
+.row label{width:115px;font-size:11px;color:#d8d9de}
 .row output{margin-left:auto;font-size:11px;color:#c9cad0}
 input[type=range]{width:100%}
 .check{display:block;font-size:11px;color:#d3d4d8;margin:8px 0}
 .status{font-size:11px;color:var(--muted);line-height:1.8}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:7px}
 .dot.good{background:var(--good);box-shadow:0 0 8px rgba(102,228,138,.55)}
-.dot.warn{background:var(--warn)}
-.map{
-  display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#c8c9ce
-}
+.map{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#c8c9ce}
 .map div{border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#121318}
 .map b{color:#fff}
 .small{font-size:10px;color:#7f828c;line-height:1.55}
 video{display:none}
-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+canvas{position:absolute;inset:0;width:100%;height:100%}
 #badge{
   position:absolute;top:16px;left:50%;transform:translateX(-50%);
   z-index:4;background:rgba(0,0,0,.52);border:1px solid rgba(255,255,255,.14);
@@ -58,26 +55,24 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 }
 @media(max-width:820px){
   #app{display:block}
-  aside{
-    position:absolute;left:10px;top:10px;width:min(320px,calc(100vw - 20px));
-    max-height:56vh;border:1px solid var(--line);border-radius:14px
-  }
+  aside{position:absolute;left:10px;top:10px;width:min(330px,calc(100vw - 20px));
+    max-height:58vh;border:1px solid var(--line);border-radius:14px}
 }
 </style>
 </head>
 <body>
 <div id="app">
 <aside>
-  <h1>10 FINGER MARIONETTE</h1>
-  <p>両手10本の指先を9本の仮想糸として使い、頭・両手・両肘・両膝・両足を操作します。人形側にはIKと慣性を加えます。</p>
+  <h1>PHYSICS MARIONETTE</h1>
+  <p>10本の指先から糸を垂らし、糸の張力と重力で人形を操作します。腕と脚は固定長の骨として扱い、引っ張っても伸びません。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
   <div class="section">
-    <h2>FINGER → PUPPET</h2>
+    <h2>FINGER → STRING</h2>
     <div class="map">
-      <div><b>左 親指</b><br>HEAD</div>
-      <div><b>右 親指</b><br>HEAD</div>
+      <div><b>左 親指</b><br>HEAD LEFT</div>
+      <div><b>右 親指</b><br>HEAD RIGHT</div>
       <div><b>左 人差し指</b><br>LEFT HAND</div>
       <div><b>右 人差し指</b><br>RIGHT HAND</div>
       <div><b>左 中指</b><br>LEFT ELBOW</div>
@@ -87,23 +82,26 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
       <div><b>左 小指</b><br>LEFT FOOT</div>
       <div><b>右 小指</b><br>RIGHT FOOT</div>
     </div>
-    <div class="small" style="margin-top:8px">頭は左右親指の中点で操作するため、10本の指から9本の糸になります。</div>
   </div>
 
   <div class="section">
-    <h2>MOTION</h2>
-    <div class="row"><label>INERTIA</label><output id="inertiaOut">0.82</output></div>
-    <input id="inertia" type="range" min="55" max="94" value="82">
-    <div class="row"><label>RESPONSE</label><output id="responseOut">0.16</output></div>
-    <input id="response" type="range" min="5" max="35" value="16">
-    <div class="row"><label>CONTROL RANGE</label><output id="rangeOut">0.82</output></div>
-    <input id="controlRange" type="range" min="55" max="110" value="82">
+    <h2>PHYSICS</h2>
+    <div class="row"><label>GRAVITY</label><output id="gravityOut">0.55</output></div>
+    <input id="gravity" type="range" min="0" max="120" value="55">
+    <div class="row"><label>DAMPING</label><output id="dampingOut">0.985</output></div>
+    <input id="damping" type="range" min="940" max="998" value="985">
+    <div class="row"><label>STRING SLACK</label><output id="slackOut">1.18</output></div>
+    <input id="slack" type="range" min="100" max="155" value="118">
+    <div class="row"><label>STRING SEGMENTS</label><output id="segmentsOut">9</output></div>
+    <input id="segments" type="range" min="5" max="14" value="9">
+    <div class="row"><label>CONSTRAINTS</label><output id="iterationsOut">8</output></div>
+    <input id="iterations" type="range" min="3" max="14" value="8">
   </div>
 
   <div class="section">
     <label class="check"><input id="showCamera" type="checkbox" checked> CAMERA IMAGE</label>
-    <label class="check"><input id="showHands" type="checkbox" checked> FINGERTIPS</label>
-    <label class="check"><input id="showStrings" type="checkbox" checked> 9 STRINGS</label>
+    <label class="check"><input id="showHands" type="checkbox" checked> HAND LANDMARKS</label>
+    <label class="check"><input id="showStrings" type="checkbox" checked> PHYSICAL STRINGS</label>
     <label class="check"><input id="swapHands" type="checkbox"> LEFT / RIGHT を入れ替える</label>
   </div>
 
@@ -116,15 +114,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
   </div>
 
   <div class="section small">
-    カメラ利用にはHTTPSまたはlocalhostが必要です。両手全体と10本の指先がカメラ内に入るようにしてください。
+    物理演算：Verlet積分＋距離制約。糸は粒子列、人形の骨格は固定長制約です。
   </div>
 </aside>
 
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">10 FINGERS → 9 STRINGS → MARIONETTE</div>
-  <div id="loading">MEDIAPIPE HAND LANDMARKER INITIALIZING...</div>
+  <div id="badge">10 FINGERS → PHYSICAL STRINGS → FIXED-LENGTH SKELETON</div>
+  <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
 
@@ -132,84 +130,57 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 import {
   HandLandmarker,
   FilesetResolver
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm";
 
-const MODEL =
-  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
-const WASM =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
+const MODEL="https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const WASM="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm";
 
-const $ = id => document.getElementById(id);
-const video = $("video");
-const canvas = $("canvas");
-const ctx = canvas.getContext("2d");
-const start = $("start");
+const $=id=>document.getElementById(id);
+const video=$("video"), canvas=$("canvas"), ctx=canvas.getContext("2d");
+const start=$("start");
+const gravityEl=$("gravity"), dampingEl=$("damping"), slackEl=$("slack"),
+      segmentsEl=$("segments"), iterationsEl=$("iterations");
+const showCamera=$("showCamera"), showHands=$("showHands"), showStrings=$("showStrings"), swapHands=$("swapHands");
 
-const inertiaEl = $("inertia");
-const responseEl = $("response");
-const rangeEl = $("controlRange");
-const showCamera = $("showCamera");
-const showHands = $("showHands");
-const showStrings = $("showStrings");
-const swapHands = $("swapHands");
+function bind(el,out,fn){const f=()=>$(out).textContent=fn(+el.value);el.addEventListener("input",f);f()}
+bind(gravityEl,"gravityOut",v=>(v/100).toFixed(2));
+bind(dampingEl,"dampingOut",v=>(v/1000).toFixed(3));
+bind(slackEl,"slackOut",v=>(v/100).toFixed(2));
+bind(segmentsEl,"segmentsOut",v=>String(v));
+bind(iterationsEl,"iterationsOut",v=>String(v));
 
-const mpDot=$("mpDot"), camDot=$("camDot"), leftDot=$("leftDot"), rightDot=$("rightDot");
-const mpStatus=$("mpStatus"), camStatus=$("camStatus"), leftStatus=$("leftStatus"), rightStatus=$("rightStatus");
-const fpsEl=$("fps"), loading=$("loading");
-
-function bindOut(el,out,scale=100){
-  const f=()=>$(out).textContent=(+el.value/scale).toFixed(2);
-  el.addEventListener("input",f); f();
-}
-bindOut(inertiaEl,"inertiaOut");
-bindOut(responseEl,"responseOut");
-bindOut(rangeEl,"rangeOut");
+const mpDot=$("mpDot"),camDot=$("camDot"),leftDot=$("leftDot"),rightDot=$("rightDot");
+const mpStatus=$("mpStatus"),camStatus=$("camStatus"),leftStatus=$("leftStatus"),rightStatus=$("rightStatus");
+const fpsEl=$("fps"),loading=$("loading");
 
 function dot(el,on){el.classList.toggle("good",!!on)}
 
-let landmarker=null, stream=null, running=false, lastVideoTime=-1;
-let latest=null, frameCount=0, fpsClock=performance.now();
-
-const TIP = {thumb:4,index:8,middle:12,ring:16,pinky:20};
-
-const hands = {
-  Left:null,
-  Right:null
-};
+let landmarker=null,stream=null,running=false,lastVideoTime=-1,lastFrame=performance.now();
+let frameCount=0,fpsClock=performance.now();
+const hands={Left:null,Right:null};
+const TIP={thumb:4,index:8,middle:12,ring:16,pinky:20};
 
 function resize(){
-  const r=canvas.getBoundingClientRect();
-  const d=Math.min(devicePixelRatio||1,2);
-  canvas.width=Math.max(1,Math.round(r.width*d));
-  canvas.height=Math.max(1,Math.round(r.height*d));
+  const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
+  canvas.width=Math.max(1,Math.round(r.width*d)); canvas.height=Math.max(1,Math.round(r.height*d));
   ctx.setTransform(d,0,0,d,0,0);
 }
-addEventListener("resize",resize); resize();
+addEventListener("resize",resize);resize();
 
 async function init(){
   try{
-    const vision = await FilesetResolver.forVisionTasks(WASM);
-    landmarker = await HandLandmarker.createFromOptions(vision,{
-      baseOptions:{
-        modelAssetPath:MODEL,
-        delegate:"GPU"
-      },
-      runningMode:"VIDEO",
-      numHands:2,
-      minHandDetectionConfidence:0.45,
-      minHandPresenceConfidence:0.45,
-      minTrackingConfidence:0.45
+    const vision=await FilesetResolver.forVisionTasks(WASM);
+    landmarker=await HandLandmarker.createFromOptions(vision,{
+      baseOptions:{modelAssetPath:MODEL,delegate:"GPU"},
+      runningMode:"VIDEO",numHands:2,
+      minHandDetectionConfidence:.45,
+      minHandPresenceConfidence:.45,
+      minTrackingConfidence:.45
     });
-    mpStatus.textContent="READY";
-    dot(mpDot,true);
-    start.disabled=false;
-    start.textContent="CAMERA START";
-    loading.style.display="none";
+    mpStatus.textContent="READY";dot(mpDot,true);
+    start.disabled=false;start.textContent="CAMERA START";loading.style.display="none";
   }catch(err){
-    console.error(err);
-    mpStatus.textContent="LOAD ERROR";
-    loading.textContent="MEDIAPIPE LOAD ERROR";
-    start.textContent="LOAD ERROR";
+    console.error(err);mpStatus.textContent="LOAD ERROR";loading.textContent="MEDIAPIPE LOAD ERROR";
   }
 }
 
@@ -217,280 +188,271 @@ start.addEventListener("click",async()=>{
   if(running)return;
   try{
     stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},
-      audio:false
+      video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false
     });
-    video.srcObject=stream;
-    await video.play();
-    running=true;
-    camStatus.textContent="ON"; dot(camDot,true);
-    start.textContent="RUNNING"; start.disabled=true;
-    requestAnimationFrame(loop);
+    video.srcObject=stream;await video.play();
+    running=true;camStatus.textContent="ON";dot(camDot,true);
+    start.disabled=true;start.textContent="RUNNING";
+    initPuppet();requestAnimationFrame(loop);
   }catch(err){
-    console.error(err);
-    camStatus.textContent="ERROR";
-    alert("カメラを起動できません。HTTPS / localhost とカメラ権限を確認してください。\\n\\n"+err.message);
+    console.error(err);camStatus.textContent="ERROR";
+    alert("カメラを起動できません。HTTPS / localhost とカメラ権限を確認してください。");
   }
 });
 
-function mirrorPoint(lm,W,H){
-  return {x:(1-lm.x)*W,y:lm.y*H,z:lm.z||0};
-}
+function mirror(lm,W,H){return{x:(1-lm.x)*W,y:lm.y*H}}
 
 function updateHands(result){
-  hands.Left=null; hands.Right=null;
+  hands.Left=null;hands.Right=null;
   if(!result?.landmarks)return;
   for(let i=0;i<result.landmarks.length;i++){
-    const cat=result.handedness?.[i]?.[0];
-    if(!cat)continue;
+    const cat=result.handedness?.[i]?.[0]; if(!cat)continue;
     let side=cat.categoryName;
-    if(swapHands.checked) side=side==="Left"?"Right":"Left";
+    if(swapHands.checked)side=side==="Left"?"Right":"Left";
     hands[side]=result.landmarks[i];
   }
 }
 
-class SpringPoint{
-  constructor(x=0,y=0){
-    this.x=x; this.y=y; this.vx=0; this.vy=0; this.ready=false;
-  }
-  step(tx,ty){
-    if(tx==null||ty==null)return;
-    if(!this.ready){this.x=tx;this.y=ty;this.ready=true}
-    const response=+responseEl.value/100;
-    const inertia=+inertiaEl.value/100;
-    this.vx=(this.vx+(tx-this.x)*response)*inertia;
-    this.vy=(this.vy+(ty-this.y)*response)*inertia;
-    this.x+=this.vx;
-    this.y+=this.vy;
-  }
-}
-
-const P={
-  head:new SpringPoint(),
-  lh:new SpringPoint(), le:new SpringPoint(),
-  rh:new SpringPoint(), re:new SpringPoint(),
-  lk:new SpringPoint(), lf:new SpringPoint(),
-  rk:new SpringPoint(), rf:new SpringPoint()
-};
-
 function finger(side,name,W,H){
-  const h=hands[side];
-  if(!h)return null;
-  return mirrorPoint(h[TIP[name]],W,H);
+  const h=hands[side];if(!h)return null;
+  return mirror(h[TIP[name]],W,H);
 }
 
-function mapControl(p,W,H){
-  if(!p)return null;
-  const amp=+rangeEl.value/100;
-  return {
-    x:W*.5+(p.x-W*.5)*amp,
-    y:H*.5+(p.y-H*.5)*amp
-  };
-}
-
-function updateTargets(W,H){
-  const lThumb=mapControl(finger("Left","thumb",W,H),W,H);
-  const rThumb=mapControl(finger("Right","thumb",W,H),W,H);
-
-  let head=null;
-  if(lThumb&&rThumb)head={x:(lThumb.x+rThumb.x)/2,y:(lThumb.y+rThumb.y)/2};
-  else head=lThumb||rThumb;
-
-  const raw={
-    head,
-    lh:mapControl(finger("Left","index",W,H),W,H),
-    le:mapControl(finger("Left","middle",W,H),W,H),
-    lk:mapControl(finger("Left","ring",W,H),W,H),
-    lf:mapControl(finger("Left","pinky",W,H),W,H),
-    rh:mapControl(finger("Right","index",W,H),W,H),
-    re:mapControl(finger("Right","middle",W,H),W,H),
-    rk:mapControl(finger("Right","ring",W,H),W,H),
-    rf:mapControl(finger("Right","pinky",W,H),W,H)
-  };
-
-  for(const k in raw) if(raw[k]) P[k].step(raw[k].x,raw[k].y);
-  return raw;
-}
-
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-function norm(x,y){const d=Math.hypot(x,y)||1;return{x:x/d,y:y/d}}
-
-function twoBoneIK(root,target,guide,L1,L2,side){
-  const dx=target.x-root.x,dy=target.y-root.y;
-  const d=clamp(Math.hypot(dx,dy),2,L1+L2-1);
-  const base=Math.atan2(dy,dx);
-  const ca=clamp((L1*L1+d*d-L2*L2)/(2*L1*d),-1,1);
-  const a=Math.acos(ca);
-
-  const e1={
-    x:root.x+Math.cos(base+a)*L1,
-    y:root.y+Math.sin(base+a)*L1
-  };
-  const e2={
-    x:root.x+Math.cos(base-a)*L1,
-    y:root.y+Math.sin(base-a)*L1
-  };
-
-  if(guide?.ready){
-    const d1=(e1.x-guide.x)**2+(e1.y-guide.y)**2;
-    const d2=(e2.x-guide.x)**2+(e2.y-guide.y)**2;
-    return d1<d2?e1:e2;
+/* -------------------- Verlet physics -------------------- */
+class Particle{
+  constructor(x,y,pinned=false){
+    this.x=x;this.y=y;this.px=x;this.py=y;this.pinned=pinned;this.pinX=x;this.pinY=y;
   }
-  return side==="L"?e1:e2;
+  integrate(dt){
+    if(this.pinned){this.x=this.pinX;this.y=this.pinY;this.px=this.x;this.py=this.y;return}
+    const damp=+dampingEl.value/1000;
+    const vx=(this.x-this.px)*damp,vy=(this.y-this.py)*damp;
+    this.px=this.x;this.py=this.y;
+    this.x+=vx;
+    this.y+=vy+(+gravityEl.value/100)*dt*dt*60;
+  }
+}
+
+function constrain(a,b,len,stiff=1){
+  let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.0001;
+  let diff=(d-len)/d*stiff;
+  const wA=a.pinned?0:1,wB=b.pinned?0:1,sum=wA+wB||1;
+  if(!a.pinned){a.x+=dx*diff*(wA/sum);a.y+=dy*diff*(wA/sum)}
+  if(!b.pinned){b.x-=dx*diff*(wB/sum);b.y-=dy*diff*(wB/sum)}
+}
+
+const body={};
+let boneConstraints=[];
+let strings=[];
+
+function addBody(name,x,y,pinned=false){body[name]=new Particle(x,y,pinned);return body[name]}
+function bone(a,b,len){boneConstraints.push({a:body[a],b:body[b],len})}
+
+function initPuppet(){
+  const W=canvas.getBoundingClientRect().width,H=canvas.getBoundingClientRect().height;
+  const s=Math.min(W,H)/720,cx=W*.61,cy=H*.34;
+  Object.keys(body).forEach(k=>delete body[k]);boneConstraints=[];strings=[];
+
+  addBody("headL",cx-24*s,cy);
+  addBody("headR",cx+24*s,cy);
+  addBody("neck",cx,cy+56*s);
+  addBody("shoulderL",cx-72*s,cy+105*s);
+  addBody("shoulderR",cx+72*s,cy+105*s);
+  addBody("chest",cx,cy+110*s);
+  addBody("pelvis",cx,cy+245*s);
+  addBody("hipL",cx-42*s,cy+250*s);
+  addBody("hipR",cx+42*s,cy+250*s);
+  addBody("elbowL",cx-145*s,cy+165*s);
+  addBody("elbowR",cx+145*s,cy+165*s);
+  addBody("handL",cx-215*s,cy+215*s);
+  addBody("handR",cx+215*s,cy+215*s);
+  addBody("kneeL",cx-55*s,cy+370*s);
+  addBody("kneeR",cx+55*s,cy+370*s);
+  addBody("footL",cx-70*s,cy+495*s);
+  addBody("footR",cx+70*s,cy+495*s);
+
+  // head / torso rigid-ish skeleton
+  bone("headL","headR",48*s);
+  bone("headL","neck",62*s); bone("headR","neck",62*s);
+  bone("neck","chest",56*s);
+  bone("shoulderL","shoulderR",144*s);
+  bone("shoulderL","chest",73*s); bone("shoulderR","chest",73*s);
+  bone("chest","pelvis",135*s);
+  bone("hipL","hipR",84*s);
+  bone("pelvis","hipL",43*s); bone("pelvis","hipR",43*s);
+
+  // FIXED LENGTH LIMBS — never stretch
+  bone("shoulderL","elbowL",108*s); bone("elbowL","handL",108*s);
+  bone("shoulderR","elbowR",108*s); bone("elbowR","handR",108*s);
+  bone("hipL","kneeL",122*s); bone("kneeL","footL",128*s);
+  bone("hipR","kneeR",122*s); bone("kneeR","footR",128*s);
+
+  rebuildStrings();
+}
+
+function makeString(key,bodyKey){
+  const count=+segmentsEl.value;
+  const target=body[bodyKey];
+  const anchor=new Particle(target.x,target.y-220,true);
+  const particles=[anchor];
+  const total=Math.max(100,Math.hypot(anchor.x-target.x,anchor.y-target.y))*(+slackEl.value/100);
+  const segLen=total/count;
+  for(let i=1;i<count;i++){
+    particles.push(new Particle(anchor.x,anchor.y+segLen*i));
+  }
+  return {key,bodyKey,anchor,particles,segLen};
+}
+
+function rebuildStrings(){
+  if(!body.headL)return;
+  strings=[
+    makeString("Lthumb","headL"), makeString("Rthumb","headR"),
+    makeString("Lindex","handL"), makeString("Rindex","handR"),
+    makeString("Lmiddle","elbowL"), makeString("Rmiddle","elbowR"),
+    makeString("Lring","kneeL"), makeString("Rring","kneeR"),
+    makeString("Lpinky","footL"), makeString("Rpinky","footR")
+  ];
+}
+segmentsEl.addEventListener("change",rebuildStrings);
+
+function fingerMap(W,H){
+  return{
+    Lthumb:finger("Left","thumb",W,H),Rthumb:finger("Right","thumb",W,H),
+    Lindex:finger("Left","index",W,H),Rindex:finger("Right","index",W,H),
+    Lmiddle:finger("Left","middle",W,H),Rmiddle:finger("Right","middle",W,H),
+    Lring:finger("Left","ring",W,H),Rring:finger("Right","ring",W,H),
+    Lpinky:finger("Left","pinky",W,H),Rpinky:finger("Right","pinky",W,H)
+  };
+}
+
+function updatePhysics(dt,W,H){
+  const fm=fingerMap(W,H);
+  const all=Object.values(body);
+  for(const s of strings){
+    const p=fm[s.key];
+    if(p){
+      s.anchor.pinX=p.x;s.anchor.pinY=p.y;
+    }else{
+      // if hand is lost, keep anchor where it last was
+      s.anchor.pinX=s.anchor.x;s.anchor.pinY=s.anchor.y;
+    }
+  }
+
+  // integrate puppet and ropes
+  all.forEach(p=>p.integrate(dt));
+  strings.forEach(s=>s.particles.forEach(p=>p.integrate(dt)));
+
+  const iterations=+iterationsEl.value;
+  for(let k=0;k<iterations;k++){
+    // rope constraints
+    for(const s of strings){
+      for(let i=0;i<s.particles.length-1;i++) constrain(s.particles[i],s.particles[i+1],s.segLen,1);
+      // final rope segment attaches to puppet joint
+      constrain(s.particles[s.particles.length-1],body[s.bodyKey],s.segLen,1);
+    }
+    // bone constraints
+    for(const c of boneConstraints) constrain(c.a,c.b,c.len,1);
+
+    // loose structural constraints for body orientation
+    // keep shoulder/chest and hip/pelvis coherent through existing bones
+  }
+
+  // floor
+  const floor=H-18;
+  for(const p of all){
+    if(p.y>floor){p.y=floor}
+    if(p.x<8)p.x=8;if(p.x>W-8)p.x=W-8;
+  }
 }
 
 function drawCamera(W,H){
-  if(!showCamera.checked){
-    ctx.fillStyle="#050608";ctx.fillRect(0,0,W,H);return;
-  }
-  ctx.save();
-  ctx.translate(W,0);ctx.scale(-1,1);
-  ctx.drawImage(video,0,0,W,H);
-  ctx.restore();
-  ctx.fillStyle="rgba(0,0,0,.43)";
-  ctx.fillRect(0,0,W,H);
+  if(!showCamera.checked){ctx.fillStyle="#050608";ctx.fillRect(0,0,W,H);return}
+  ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,W,H);ctx.restore();
+  ctx.fillStyle="rgba(0,0,0,.45)";ctx.fillRect(0,0,W,H);
 }
 
-const handConnections=[
- [0,1],[1,2],[2,3],[3,4],
- [0,5],[5,6],[6,7],[7,8],
- [5,9],[9,10],[10,11],[11,12],
- [9,13],[13,14],[14,15],[15,16],
- [13,17],[17,18],[18,19],[19,20],[0,17]
+const connections=[
+ [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
+ [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]
 ];
-
 function drawHand(side,W,H){
   if(!showHands.checked||!hands[side])return;
-  const pts=hands[side].map(p=>mirrorPoint(p,W,H));
-  ctx.save();
-  ctx.strokeStyle="rgba(255,255,255,.20)";
-  ctx.lineWidth=1.2;
-  for(const [a,b] of handConnections){
-    ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);ctx.stroke();
-  }
-  ctx.fillStyle="rgba(255,255,255,.90)";
-  for(const idx of Object.values(TIP)){
-    const p=pts[idx];ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);ctx.fill();
-  }
+  const pts=hands[side].map(p=>mirror(p,W,H));
+  ctx.save();ctx.strokeStyle="rgba(255,255,255,.18)";ctx.lineWidth=1.2;
+  for(const [a,b] of connections){ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);ctx.stroke()}
+  ctx.fillStyle="rgba(255,255,255,.9)";
+  for(const i of Object.values(TIP)){const p=pts[i];ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill()}
   ctx.restore();
 }
 
-function controlPointFromSpring(k){return P[k].ready?{x:P[k].x,y:P[k].y}:null}
-
-function drawStrings(raw,joints){
+function drawStringsFn(){
   if(!showStrings.checked)return;
-  const pairs=[
-    ["head",joints.head],
-    ["lh",joints.lHand],["le",joints.lElbow],
-    ["rh",joints.rHand],["re",joints.rElbow],
-    ["lk",joints.lKnee],["lf",joints.lFoot],
-    ["rk",joints.rKnee],["rf",joints.rFoot]
-  ];
-  ctx.save();
-  ctx.strokeStyle="rgba(255,255,255,.32)";
-  ctx.lineWidth=1.2;
-  for(const [k,j] of pairs){
-    const s=controlPointFromSpring(k);
-    if(!s||!j)continue;
-    ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(j.x,j.y);ctx.stroke();
+  ctx.save();ctx.strokeStyle="rgba(255,255,255,.45)";ctx.lineWidth=1.15;
+  for(const s of strings){
+    ctx.beginPath();
+    ctx.moveTo(s.particles[0].x,s.particles[0].y);
+    for(let i=1;i<s.particles.length;i++)ctx.lineTo(s.particles[i].x,s.particles[i].y);
+    ctx.lineTo(body[s.bodyKey].x,body[s.bodyKey].y);
+    ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawPuppet(W,H,raw){
-  const sc=Math.min(W,H)/720;
+function line(a,b,w){
+  ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(body[a].x,body[a].y);ctx.lineTo(body[b].x,body[b].y);ctx.stroke();
+}
+function joint(name,r=7){
+  const p=body[name];ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+}
 
-  // Head target drives the upper body, but the torso follows only partially.
-  const defaultHead={x:W*.60,y:H*.25};
-  const Ht=P.head.ready?{x:P.head.x,y:P.head.y}:defaultHead;
-  const head={
-    x:clamp(Ht.x,W*.22,W*.80),
-    y:clamp(Ht.y,H*.12,H*.44)
-  };
+function drawPuppet(W,H){
+  const s=Math.min(W,H)/720;
+  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";
+  ctx.strokeStyle="rgba(255,255,255,.97)";ctx.fillStyle="#07080a";
 
-  const neck={x:head.x,y:head.y+54*sc};
-  const chest={x:head.x,y:head.y+120*sc};
-  const pelvis={x:head.x,y:head.y+250*sc};
+  // strings behind puppet
+  drawStringsFn();
 
-  const shoulderSpread=72*sc;
-  const hipSpread=43*sc;
-  const LS={x:chest.x-shoulderSpread,y:chest.y-18*sc};
-  const RS={x:chest.x+shoulderSpread,y:chest.y-18*sc};
-  const LH={x:pelvis.x-hipSpread,y:pelvis.y};
-  const RH={x:pelvis.x+hipSpread,y:pelvis.y};
+  // head centered between two physical head particles
+  const hx=(body.headL.x+body.headR.x)/2,hy=(body.headL.y+body.headR.y)/2;
+  const headR=40*s;
+  ctx.lineWidth=5*s;ctx.beginPath();ctx.arc(hx,hy,headR,0,Math.PI*2);ctx.fill();ctx.stroke();
 
-  const fallbackLH={x:LS.x-155*sc,y:LS.y+55*sc};
-  const fallbackRH={x:RS.x+155*sc,y:RS.y+55*sc};
-  const fallbackLF={x:LH.x-25*sc,y:pelvis.y+225*sc};
-  const fallbackRF={x:RH.x+25*sc,y:pelvis.y+225*sc};
+  // torso
+  line("neck","chest",11*s);line("chest","pelvis",12*s);
+  line("shoulderL","shoulderR",10*s);line("hipL","hipR",10*s);
 
-  const lHand=P.lh.ready?{x:P.lh.x,y:P.lh.y}:fallbackLH;
-  const rHand=P.rh.ready?{x:P.rh.x,y:P.rh.y}:fallbackRH;
-  const lFoot=P.lf.ready?{x:P.lf.x,y:P.lf.y}:fallbackLF;
-  const rFoot=P.rf.ready?{x:P.rf.x,y:P.rf.y}:fallbackRF;
+  // fixed-length arms
+  line("shoulderL","elbowL",13*s);line("elbowL","handL",13*s);
+  line("shoulderR","elbowR",13*s);line("elbowR","handR",13*s);
 
-  const arm1=108*sc,arm2=108*sc;
-  const leg1=120*sc,leg2=125*sc;
+  // fixed-length legs
+  line("hipL","kneeL",13*s);line("kneeL","footL",13*s);
+  line("hipR","kneeR",13*s);line("kneeR","footR",13*s);
 
-  const lElbow=twoBoneIK(LS,lHand,P.le,arm1,arm2,"L");
-  const rElbow=twoBoneIK(RS,rHand,P.re,arm1,arm2,"R");
-  const lKnee=twoBoneIK(LH,lFoot,P.lk,leg1,leg2,"L");
-  const rKnee=twoBoneIK(RH,rFoot,P.rk,leg1,leg2,"R");
+  // neck to head
+  ctx.lineWidth=7*s;
+  ctx.beginPath();ctx.moveTo(body.neck.x,body.neck.y);ctx.lineTo(hx,hy+headR*.6);ctx.stroke();
 
-  const joints={head,lHand,lElbow,rHand,rElbow,lKnee,lFoot,rKnee,rFoot};
-  drawStrings(raw,joints);
-
-  ctx.save();
-  ctx.lineCap="round";ctx.lineJoin="round";
-  ctx.strokeStyle="rgba(255,255,255,.96)";
-  ctx.fillStyle="#07080a";
-
-  // Head
-  ctx.lineWidth=5*sc;
-  ctx.beginPath();ctx.arc(head.x,head.y,40*sc,0,Math.PI*2);ctx.fill();ctx.stroke();
-
-  // Spine / torso
-  ctx.lineWidth=12*sc;
-  ctx.beginPath();ctx.moveTo(neck.x,neck.y);ctx.lineTo(chest.x,chest.y);ctx.lineTo(pelvis.x,pelvis.y);ctx.stroke();
-
-  // Shoulders and pelvis
-  ctx.lineWidth=10*sc;
-  ctx.beginPath();ctx.moveTo(LS.x,LS.y);ctx.lineTo(RS.x,RS.y);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(LH.x,LH.y);ctx.lineTo(RH.x,RH.y);ctx.stroke();
-
-  // Limbs
-  ctx.lineWidth=13*sc;
-  const limb=(a,b,c)=>{
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.stroke();
-  };
-  limb(LS,lElbow,lHand);
-  limb(RS,rElbow,rHand);
-  limb(LH,lKnee,lFoot);
-  limb(RH,rKnee,rFoot);
-
-  // Joint rings
-  ctx.fillStyle="#07080a";ctx.strokeStyle="#fff";ctx.lineWidth=3.5*sc;
-  [LS,RS,LH,RH,lElbow,rElbow,lKnee,rKnee,lHand,rHand,lFoot,rFoot].forEach(p=>{
-    ctx.beginPath();ctx.arc(p.x,p.y,7.5*sc,0,Math.PI*2);ctx.fill();ctx.stroke();
-  });
-
+  // joints
+  ctx.fillStyle="#07080a";ctx.strokeStyle="#fff";ctx.lineWidth=3*s;
+  ["shoulderL","shoulderR","elbowL","elbowR","handL","handR","hipL","hipR","kneeL","kneeR","footL","footR"].forEach(n=>joint(n,7*s));
   ctx.restore();
 }
 
 function loop(now){
   if(!running)return;
   const rect=canvas.getBoundingClientRect(),W=rect.width,H=rect.height;
+  const dt=Math.min(1/30,(now-lastFrame)/1000||1/60);lastFrame=now;
 
   if(video.currentTime!==lastVideoTime){
     try{
-      latest=landmarker.detectForVideo(video,performance.now());
-      updateHands(latest);
-      frameCount++;
+      const result=landmarker.detectForVideo(video,performance.now());
+      updateHands(result);frameCount++;
       if(now-fpsClock>=1000){
-        fpsEl.textContent=Math.round(frameCount*1000/(now-fpsClock));
-        frameCount=0;fpsClock=now;
+        fpsEl.textContent=Math.round(frameCount*1000/(now-fpsClock));frameCount=0;fpsClock=now;
       }
-    }catch(err){console.error(err)}
+    }catch(e){console.error(e)}
     lastVideoTime=video.currentTime;
   }
 
@@ -498,12 +460,11 @@ function loop(now){
   rightStatus.textContent=hands.Right?"TRACKING":"WAIT";
   dot(leftDot,!!hands.Left);dot(rightDot,!!hands.Right);
 
-  ctx.clearRect(0,0,W,H);
-  drawCamera(W,H);
-  drawHand("Left",W,H);
-  drawHand("Right",W,H);
-  const raw=updateTargets(W,H);
-  drawPuppet(W,H,raw);
+  updatePhysics(dt,W,H);
+
+  ctx.clearRect(0,0,W,H);drawCamera(W,H);
+  drawHand("Left",W,H);drawHand("Right",W,H);
+  drawPuppet(W,H);
 
   requestAnimationFrame(loop);
 }
