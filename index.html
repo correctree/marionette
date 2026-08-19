@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — OPEN HAND DEFAULT</title>
+<title>PHYSICS MARIONETTE — TUNED STRING LENGTHS</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -64,7 +64,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <div id="app">
 <aside>
   <h1>PHYSICS MARIONETTE</h1>
-  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。人差し指＝手、中指＝肘、薬指＝膝、小指＝足、親指＝頭。糸は張力だけを伝え、腕と脚の骨長は固定です。</p>
+  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。親指の糸は短めで頭を高く、薬指・小指の糸は長めで脚がすぐ持ち上がらないよう調整しています。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -121,7 +121,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">OPEN HAND DEFAULT ・ RING→KNEE ・ PINKY→FOOT</div>
+  <div id="badge">SHORT THUMB STRINGS ・ LONG LEG STRINGS</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -365,12 +365,22 @@ function makeString(key,bodyKey){
   const count=+segmentsEl.value;
   const target=body[bodyKey];
 
-  // Shorter starting length than the previous version.
   const anchor=new Particle(target.x,target.y-235,true,0.25);
   const particles=[anchor];
 
+  // Per-finger string tuning:
+  // thumbs = shorter -> head sits higher
+  // ring/pinky = longer -> legs do not rise too easily
+  const lengthScale = {
+    Lthumb:0.72, Rthumb:0.72,
+    Lindex:1.00, Rindex:1.00,
+    Lmiddle:1.00, Rmiddle:1.00,
+    Lring:1.28, Rring:1.28,
+    Lpinky:1.38, Rpinky:1.38
+  }[key] || 1.0;
+
   const straight=Math.max(120,Math.hypot(anchor.x-target.x,anchor.y-target.y));
-  const total=straight*(+slackEl.value/100);
+  const total=straight*(+slackEl.value/100)*lengthScale;
   const segLen=total/count;
 
   // Start close to a hanging line so the rope settles immediately.
