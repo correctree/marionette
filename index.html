@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE</title>
+<title>FINGER BEND MARIONETTE — UPWARD 2X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -66,7 +66,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <div id="app">
 <aside>
   <h1>FINGER BEND MARIONETTE</h1>
-  <p>MediaPipe Handsで左右8本の指の屈曲率を計算し、その曲がり具合を人形の関節操作へ変換します。両手を広げた状態がニュートラルです。</p>
+  <p>MediaPipe Handsで左右8本の指の屈曲率を計算し、その曲がり具合を人形の関節操作へ変換します。人差し指を曲げると手が上がり、中指を曲げると肘が上がります。動作倍率は初期値2.0です。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -89,8 +89,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
     <input id="bendStart" type="range" min="5" max="45" value="18">
     <div class="row"><label>BEND MAX</label><output id="maxOut">0.78</output></div>
     <input id="bendMax" type="range" min="45" max="95" value="78">
-    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">1.00</output></div>
-    <input id="motionRange" type="range" min="60" max="140" value="100">
+    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">2.00</output></div>
+    <input id="motionRange" type="range" min="50" max="250" value="200">
   </div>
 
   <div class="section">
@@ -129,7 +129,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">OPEN HAND = NEUTRAL ・ FINGER BEND = JOINT CONTROL</div>
+  <div id="badge">OPEN HAND = NEUTRAL ・ INDEX/MIDDLE = UP ・ MOTION ×2</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -360,11 +360,13 @@ function drawPuppet(W,H){
   const lHandLift=ctrl.LI*1.15*amp;
   const rHandLift=ctrl.RI*1.15*amp;
 
-  const lElbow=pFromPolar(shoulderL,upperArm,lBaseElbowAng-lElbowLift);
-  const rElbow=pFromPolar(shoulderR,upperArm,rBaseElbowAng+rElbowLift);
+  // Bending the middle finger raises the elbow.
+  const lElbow=pFromPolar(shoulderL,upperArm,lBaseElbowAng+lElbowLift);
+  const rElbow=pFromPolar(shoulderR,upperArm,rBaseElbowAng-rElbowLift);
 
-  const lForeAng=lBaseElbowAng + .10 - lHandLift;
-  const rForeAng=rBaseElbowAng - .10 + rHandLift;
+  // Bending the index finger raises the hand.
+  const lForeAng=lBaseElbowAng + .10 + lHandLift;
+  const rForeAng=rBaseElbowAng - .10 - rHandLift;
   const lHand=pFromPolar(lElbow,foreArm,lForeAng);
   const rHand=pFromPolar(rElbow,foreArm,rForeAng);
 
