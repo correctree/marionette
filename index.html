@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — STABLE BODY & LONG LEG STRINGS</title>
+<title>FINGER BEND MARIONETTE</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -13,7 +13,7 @@
 html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{overflow:hidden}
-#app{width:100%;height:100%;display:grid;grid-template-columns:340px 1fr}
+#app{height:100%;display:grid;grid-template-columns:330px 1fr}
 aside{
   position:relative;z-index:10;padding:18px;background:var(--panel);
   border-right:1px solid var(--line);overflow:auto;backdrop-filter:blur(14px)
@@ -29,8 +29,8 @@ button{
 }
 button.primary{background:#f3f3f4;color:#101114}
 button:disabled{opacity:.45;cursor:default}
-.row{display:flex;align-items:center;gap:10px;margin:9px 0}
-.row label{width:115px;font-size:11px;color:#d8d9de}
+.row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.row label{width:112px;font-size:11px;color:#d8d9de}
 .row output{margin-left:auto;font-size:11px;color:#c9cad0}
 input[type=range]{width:100%}
 .check{display:block;font-size:11px;color:#d3d4d8;margin:8px 0}
@@ -40,9 +40,11 @@ input[type=range]{width:100%}
 .map{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#c8c9ce}
 .map div{border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#121318}
 .map b{color:#fff}
+.meter{height:6px;background:#1c1e23;border-radius:999px;overflow:hidden;margin-top:4px}
+.meter span{display:block;height:100%;width:0%;background:#fff}
 .small{font-size:10px;color:#7f828c;line-height:1.55}
 video{display:none}
-canvas{position:absolute;inset:0;width:100%;height:100%}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 #badge{
   position:absolute;top:16px;left:50%;transform:translateX(-50%);
   z-index:4;background:rgba(0,0,0,.52);border:1px solid rgba(255,255,255,.14);
@@ -55,7 +57,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 }
 @media(max-width:820px){
   #app{display:block}
-  aside{position:absolute;left:10px;top:10px;width:min(330px,calc(100vw - 20px));
+  aside{position:absolute;left:10px;top:10px;width:min(320px,calc(100vw - 20px));
     max-height:58vh;border:1px solid var(--line);border-radius:14px}
 }
 </style>
@@ -63,51 +65,51 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <body>
 <div id="app">
 <aside>
-  <h1>PHYSICS MARIONETTE</h1>
-  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。背骨→首→顔の連なりを維持し、関節の減衰と姿勢制約で暴れを抑えます。腰は両手中心で穏やかに操作し、薬指・小指の糸を長くして脚が簡単に持ち上がらない設定です。</p>
+  <h1>FINGER BEND MARIONETTE</h1>
+  <p>MediaPipe Handsで左右8本の指の屈曲率を計算し、その曲がり具合を人形の関節操作へ変換します。両手を広げた状態がニュートラルです。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
   <div class="section">
-    <h2>FINGER → STRING</h2>
+    <h2>FINGER → ACTION</h2>
     <div class="map">
-      <div><b>左 親指</b><br>HEAD LEFT</div>
-      <div><b>右 親指</b><br>HEAD RIGHT</div>
-      <div><b>左 人差し指</b><br>LEFT HAND</div>
-      <div><b>右 人差し指</b><br>RIGHT HAND</div>
-      <div><b>左 中指</b><br>LEFT ELBOW</div>
-      <div><b>右 中指</b><br>RIGHT ELBOW</div>
-      <div><b>左 薬指</b><br>LEFT KNEE</div>
-      <div><b>右 薬指</b><br>RIGHT KNEE</div>
-      <div><b>左 小指</b><br>LEFT FOOT</div>
-      <div><b>右 小指</b><br>RIGHT FOOT</div>
+      <div><b>人差し指</b><br>手を上げる</div>
+      <div><b>中指</b><br>肘を上げる</div>
+      <div><b>薬指</b><br>膝を上げる</div>
+      <div><b>小指</b><br>脚を上げる</div>
     </div>
+    <div class="small" style="margin-top:8px">左右は独立です。左手の指は人形の左側、右手の指は人形の右側を操作します。</div>
   </div>
 
   <div class="section">
-    <h2>PHYSICS</h2>
-    <div class="row"><label>GRAVITY</label><output id="gravityOut">0.55</output></div>
-    <input id="gravity" type="range" min="20" max="160" value="95">
-    <div class="row"><label>DAMPING</label><output id="dampingOut">0.985</output></div>
-    <input id="damping" type="range" min="940" max="998" value="970">
-    <div class="row"><label>STRING SLACK</label><output id="slackOut">1.18</output></div>
-    <input id="slack" type="range" min="100" max="135" value="106">
-    <div class="row"><label>STRING SEGMENTS</label><output id="segmentsOut">9</output></div>
-    <input id="segments" type="range" min="5" max="14" value="9">
-    <div class="row"><label>WAIST CONTROL</label><output id="waistOut">0.22</output></div>
-    <input id="waistControl" type="range" min="0" max="60" value="22">
-    <div class="row"><label>STABILITY</label><output id="stabilityOut">0.86</output></div>
-    <input id="stability" type="range" min="50" max="98" value="86">
-    <div class="row"><label>JOINT DAMPING</label><output id="jointDampingOut">0.10</output></div>
-    <input id="jointDamping" type="range" min="0" max="30" value="10">
-    <div class="row"><label>CONSTRAINTS</label><output id="iterationsOut">8</output></div>
-    <input id="iterations" type="range" min="8" max="20" value="16">
+    <h2>CONTROL</h2>
+    <div class="row"><label>SMOOTHING</label><output id="smoothOut">0.20</output></div>
+    <input id="smooth" type="range" min="5" max="50" value="20">
+    <div class="row"><label>BEND START</label><output id="startOut">0.18</output></div>
+    <input id="bendStart" type="range" min="5" max="45" value="18">
+    <div class="row"><label>BEND MAX</label><output id="maxOut">0.78</output></div>
+    <input id="bendMax" type="range" min="45" max="95" value="78">
+    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">1.00</output></div>
+    <input id="motionRange" type="range" min="60" max="140" value="100">
+  </div>
+
+  <div class="section">
+    <h2>LIVE BEND</h2>
+    <div class="map">
+      <div>L INDEX<div class="meter"><span id="mLI"></span></div></div>
+      <div>R INDEX<div class="meter"><span id="mRI"></span></div></div>
+      <div>L MIDDLE<div class="meter"><span id="mLM"></span></div></div>
+      <div>R MIDDLE<div class="meter"><span id="mRM"></span></div></div>
+      <div>L RING<div class="meter"><span id="mLR"></span></div></div>
+      <div>R RING<div class="meter"><span id="mRR"></span></div></div>
+      <div>L PINKY<div class="meter"><span id="mLP"></span></div></div>
+      <div>R PINKY<div class="meter"><span id="mRP"></span></div></div>
+    </div>
   </div>
 
   <div class="section">
     <label class="check"><input id="showCamera" type="checkbox" checked> CAMERA IMAGE</label>
     <label class="check"><input id="showHands" type="checkbox" checked> HAND LANDMARKS</label>
-    <label class="check"><input id="showStrings" type="checkbox" checked> PHYSICAL STRINGS</label>
     <label class="check"><input id="swapHands" type="checkbox"> LEFT / RIGHT を入れ替える</label>
   </div>
 
@@ -120,14 +122,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
   </div>
 
   <div class="section small">
-    Hand trackingは @mediapipe/hands 0.4.1675469240。物理演算はVerlet積分＋距離制約です。
+    指の屈曲率はMCP/PIP/DIPの角度から計算します。親指は操作には使いません。
   </div>
 </aside>
 
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">STABLE BODY ・ LONG KNEE/FOOT STRINGS</div>
+  <div id="badge">OPEN HAND = NEUTRAL ・ FINGER BEND = JOINT CONTROL</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -135,96 +137,79 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
 <script>
 const MP_HANDS_BASE="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240";
-
 const $=id=>document.getElementById(id);
 const video=$("video"), canvas=$("canvas"), ctx=canvas.getContext("2d");
 const start=$("start");
-const gravityEl=$("gravity"), dampingEl=$("damping"), slackEl=$("slack"),
-      segmentsEl=$("segments"), iterationsEl=$("iterations"),
-      waistControlEl=$("waistControl"),
-      stabilityEl=$("stability"), jointDampingEl=$("jointDamping");
-const showCamera=$("showCamera"), showHands=$("showHands"), showStrings=$("showStrings"), swapHands=$("swapHands");
 
-function bind(el,out,fn){const f=()=>$(out).textContent=fn(+el.value);el.addEventListener("input",f);f()}
-bind(gravityEl,"gravityOut",v=>(v/100).toFixed(2));
-bind(dampingEl,"dampingOut",v=>(v/1000).toFixed(3));
-bind(slackEl,"slackOut",v=>(v/100).toFixed(2));
-bind(segmentsEl,"segmentsOut",v=>String(v));
-bind(iterationsEl,"iterationsOut",v=>String(v));
-bind(waistControlEl,"waistOut",v=>(v/100).toFixed(2));
-bind(stabilityEl,"stabilityOut",v=>(v/100).toFixed(2));
-bind(jointDampingEl,"jointDampingOut",v=>(v/100).toFixed(2));
+const smoothEl=$("smooth"),bendStartEl=$("bendStart"),bendMaxEl=$("bendMax"),motionRangeEl=$("motionRange");
+const showCamera=$("showCamera"),showHands=$("showHands"),swapHands=$("swapHands");
+
+function bind(el,out,scale=100){
+  const f=()=>$(out).textContent=(+el.value/scale).toFixed(2);
+  el.addEventListener("input",f);f();
+}
+bind(smoothEl,"smoothOut");
+bind(bendStartEl,"startOut");
+bind(bendMaxEl,"maxOut");
+bind(motionRangeEl,"rangeOut");
 
 const mpDot=$("mpDot"),camDot=$("camDot"),leftDot=$("leftDot"),rightDot=$("rightDot");
 const mpStatus=$("mpStatus"),camStatus=$("camStatus"),leftStatus=$("leftStatus"),rightStatus=$("rightStatus");
 const fpsEl=$("fps"),loading=$("loading");
 
 function dot(el,on){el.classList.toggle("good",!!on)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function lerp(a,b,t){return a+(b-a)*t}
 
-let mpHands=null,stream=null,running=false,processing=false,lastFrame=performance.now();
+let mpHands=null,stream=null,running=false,processing=false;
 let frameCount=0,fpsClock=performance.now();
+
 const hands={Left:null,Right:null};
-const TIP={thumb:4,index:8,middle:12,ring:16,pinky:20};
-
-// Pelvis control target derived from both palms.
-// It is a soft target, not a pin, so the body remains physical.
-let waistTarget={x:null,y:null,ready:false};
-let waistBase={x:null,y:null};
-
+const fingerIds={
+  index:[5,6,7,8],
+  middle:[9,10,11,12],
+  ring:[13,14,15,16],
+  pinky:[17,18,19,20]
+};
 
 function resize(){
   const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
-  canvas.width=Math.max(1,Math.round(r.width*d)); canvas.height=Math.max(1,Math.round(r.height*d));
+  canvas.width=Math.max(1,Math.round(r.width*d));
+  canvas.height=Math.max(1,Math.round(r.height*d));
   ctx.setTransform(d,0,0,d,0,0);
 }
 addEventListener("resize",resize);resize();
 
 async function init(){
   try{
-    mpStatus.textContent="SCRIPT";
-    loading.textContent="LOADING MEDIAPIPE HANDS...";
+    if(typeof Hands==="undefined") throw new Error("MediaPipe Hands script did not load");
 
-    if(typeof Hands==="undefined"){
-      throw new Error("MediaPipe Hands script did not load");
-    }
-
-    mpHands=new Hands({
-      locateFile:(file)=>`${MP_HANDS_BASE}/${file}`
-    });
-
+    mpHands=new Hands({locateFile:file=>`${MP_HANDS_BASE}/${file}`});
     mpHands.setOptions({
       maxNumHands:2,
       modelComplexity:1,
-      minDetectionConfidence:0.45,
-      minTrackingConfidence:0.45
+      minDetectionConfidence:.5,
+      minTrackingConfidence:.5
     });
-
-    mpHands.onResults((results)=>{
-      updateHandsLegacy(results);
+    mpHands.onResults(results=>{
+      updateHands(results);
       processing=false;
       frameCount++;
       const now=performance.now();
       if(now-fpsClock>=1000){
         fpsEl.textContent=Math.round(frameCount*1000/(now-fpsClock));
-        frameCount=0;
-        fpsClock=now;
+        frameCount=0;fpsClock=now;
       }
     });
 
-    mpStatus.textContent="READY";
-    dot(mpDot,true);
-    start.disabled=false;
-    start.textContent="CAMERA START";
+    mpStatus.textContent="READY";dot(mpDot,true);
+    start.disabled=false;start.textContent="CAMERA START";
     loading.style.display="none";
   }catch(err){
-    console.error("MediaPipe Hands init failed:",err);
+    console.error(err);
     mpStatus.textContent="LOAD ERROR";
     start.textContent="MEDIAPIPE ERROR";
-    loading.innerHTML=
-      "MEDIAPIPE HANDS LOAD ERROR<br>" +
-      "<span style=\"font-size:10px;opacity:.72\">" +
-      (err?.message || String(err)) +
-      "</span>";
+    loading.textContent="MEDIAPIPE LOAD ERROR";
   }
 }
 
@@ -232,511 +217,231 @@ start.addEventListener("click",async()=>{
   if(running)return;
   try{
     stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false
+      video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},
+      audio:false
     });
     video.srcObject=stream;await video.play();
     running=true;camStatus.textContent="ON";dot(camDot,true);
     start.disabled=true;start.textContent="RUNNING";
-    waistBase={x:null,y:null,ready:false};
-    waistTarget={x:null,y:null,ready:false};
-    initPuppet();requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
   }catch(err){
-    console.error(err);camStatus.textContent="ERROR";
+    console.error(err);
+    camStatus.textContent="ERROR";
     alert("カメラを起動できません。HTTPS / localhost とカメラ権限を確認してください。");
   }
 });
 
-function mirror(lm,W,H){return{x:(1-lm.x)*W,y:lm.y*H}}
-
-function updateHandsLegacy(results){
-  hands.Left=null;
-  hands.Right=null;
-  const lm=results?.multiHandLandmarks || [];
-  const hd=results?.multiHandedness || [];
-
+function updateHands(results){
+  hands.Left=null;hands.Right=null;
+  const lm=results?.multiHandLandmarks||[];
+  const hd=results?.multiHandedness||[];
   for(let i=0;i<lm.length;i++){
-    let side=hd[i]?.label || hd[i]?.classification?.[0]?.label || null;
-    if(!side) continue;
-
-    // Because the displayed camera is mirrored, swap the semantic side once.
-    side = side==="Left" ? "Right" : "Left";
+    let side=hd[i]?.label||hd[i]?.classification?.[0]?.label;
+    if(!side)continue;
+    side=side==="Left"?"Right":"Left";
     if(swapHands.checked) side=side==="Left"?"Right":"Left";
     hands[side]=lm[i];
   }
 }
 
-function finger(side,name,W,H){
-  const h=hands[side];if(!h)return null;
-  return mirror(h[TIP[name]],W,H);
+function angleABC(a,b,c){
+  const ab={x:a.x-b.x,y:a.y-b.y,z:(a.z||0)-(b.z||0)};
+  const cb={x:c.x-b.x,y:c.y-b.y,z:(c.z||0)-(b.z||0)};
+  const dot=ab.x*cb.x+ab.y*cb.y+ab.z*cb.z;
+  const la=Math.hypot(ab.x,ab.y,ab.z)||1;
+  const lb=Math.hypot(cb.x,cb.y,cb.z)||1;
+  return Math.acos(clamp(dot/(la*lb),-1,1));
 }
 
-function palmCenter(side,W,H){
-  const h=hands[side];
-  if(!h)return null;
-  const ids=[0,5,9,13,17];
-  let x=0,y=0;
-  for(const id of ids){
-    const p=mirror(h[id],W,H);
-    x+=p.x; y+=p.y;
-  }
-  return {x:x/ids.length,y:y/ids.length};
+function rawFingerBend(hand,name){
+  if(!hand)return 0;
+  const [mcp,pip,dip,tip]=fingerIds[name];
+
+  // Straight finger ~ PI at each joint.
+  const a1=angleABC(hand[0],hand[mcp],hand[pip]);
+  const a2=angleABC(hand[mcp],hand[pip],hand[dip]);
+  const a3=angleABC(hand[pip],hand[dip],hand[tip]);
+
+  const straightness=(a1+a2+a3)/(Math.PI*3);
+  return clamp(1-straightness,0,1);
 }
 
-function updateWaistTarget(W,H){
-  const L=palmCenter("Left",W,H);
-  const R=palmCenter("Right",W,H);
-  if(!L || !R){
-    waistTarget.ready=false;
-    return;
-  }
-
-  const cx=(L.x+R.x)/2;
-  const cy=(L.y+R.y)/2;
-
-  if(!waistBase.ready){
-    waistBase={x:cx,y:cy,ready:true};
-  }
-
-  // Move pelvis relative to the initial open-hand center.
-  // This keeps the default pose intact when tracking begins.
-  const gain=+waistControlEl.value/100;
-  waistTarget.x=body.pelvis.restX + (cx-waistBase.x)*gain;
-  waistTarget.y=body.pelvis.restY + (cy-waistBase.y)*gain;
-  waistTarget.ready=true;
+function normalizeBend(v){
+  const a=+bendStartEl.value/100;
+  const b=Math.max(a+.05,+bendMaxEl.value/100);
+  return clamp((v-a)/(b-a),0,1);
 }
 
-/* -------------------- Verlet physics -------------------- */
-class Particle{
-  constructor(x,y,pinned=false,mass=1){
-    this.x=x;this.y=y;this.px=x;this.py=y;this.pinned=pinned;this.pinX=x;this.pinY=y;
-    this.mass=mass;
-    this.invMass=pinned?0:1/mass;
-    this.restX=x;this.restY=y;
-  }
-  integrate(dt){
-    if(this.pinned){
-      this.x=this.pinX;this.y=this.pinY;
-      this.px=this.x;this.py=this.y;
-      return;
-    }
-    const damp=+dampingEl.value/1000;
-    const vx=(this.x-this.px)*damp;
-    const vy=(this.y-this.py)*damp;
-    this.px=this.x;this.py=this.y;
+const ctrl={
+  LI:0,LM:0,LR:0,LP:0,
+  RI:0,RM:0,RR:0,RP:0
+};
 
-    // Gravity acceleration is independent of mass.
-    // Slider 1.00 ~= 1800 px/s².
-    const g=(+gravityEl.value/100)*1800;
-    this.x+=vx;
-    this.y+=vy+g*dt*dt;
-  }
-}
-
-function constrain(a,b,len,stiff=1){
-  const dx=b.x-a.x,dy=b.y-a.y;
-  const d=Math.hypot(dx,dy)||.0001;
-  const diff=(d-len)/d*stiff;
-  const wA=a.invMass||0,wB=b.invMass||0;
-  const sum=wA+wB;
-  if(sum<=0)return;
-  if(wA>0){a.x+=dx*diff*(wA/sum);a.y+=dy*diff*(wA/sum)}
-  if(wB>0){b.x-=dx*diff*(wB/sum);b.y-=dy*diff*(wB/sum)}
-}
-
-// Rope is unilateral: it can pull when taut, but never push when slack.
-function constrainRope(a,b,maxLen,stiff=1){
-  const dx=b.x-a.x,dy=b.y-a.y;
-  const d=Math.hypot(dx,dy)||.0001;
-  if(d<=maxLen)return; // slack: no force, no compression
-  const diff=(d-maxLen)/d*stiff;
-  const wA=a.invMass||0,wB=b.invMass||0;
-  const sum=wA+wB;
-  if(sum<=0)return;
-  if(wA>0){a.x+=dx*diff*(wA/sum);a.y+=dy*diff*(wA/sum)}
-  if(wB>0){b.x-=dx*diff*(wB/sum);b.y-=dy*diff*(wB/sum)}
-}
-
-const body={};
-let boneConstraints=[];
-let strings=[];
-
-// Heavier puppet: body particles react more slowly than rope particles.
-const PUPPET_MASS = 4.0;
-
-
-function addBody(name,x,y,pinned=false){body[name]=new Particle(x,y,pinned,PUPPET_MASS);return body[name]}
-function bone(a,b,len){boneConstraints.push({a:body[a],b:body[b],len})}
-
-function initPuppet(){
-  const W=canvas.getBoundingClientRect().width,H=canvas.getBoundingClientRect().height;
-  const s=Math.min(W,H)/720,cx=W*.61,cy=H*.34;
-  Object.keys(body).forEach(k=>delete body[k]);boneConstraints=[];strings=[];
-
-  addBody("headC",cx,cy);
-  addBody("headL",cx-24*s,cy);
-  addBody("headR",cx+24*s,cy);
-  addBody("skullBase",cx,cy+40*s);
-  addBody("neck",cx,cy+56*s);
-  addBody("shoulderL",cx-72*s,cy+105*s);
-  addBody("shoulderR",cx+72*s,cy+105*s);
-  addBody("chest",cx,cy+110*s);
-  addBody("pelvis",cx,cy+245*s);
-  addBody("hipL",cx-42*s,cy+250*s);
-  addBody("hipR",cx+42*s,cy+250*s);
-  addBody("elbowL",cx-145*s,cy+165*s);
-  addBody("elbowR",cx+145*s,cy+165*s);
-  addBody("handL",cx-215*s,cy+215*s);
-  addBody("handR",cx+215*s,cy+215*s);
-  addBody("kneeL",cx-55*s,cy+370*s);
-  addBody("kneeR",cx+55*s,cy+370*s);
-  addBody("footL",cx-70*s,cy+495*s);
-  addBody("footR",cx+70*s,cy+495*s);
-
-  // Rigid head + short neck connection.
-  // skullBase is always the bottom of the head and remains attached to neck.
-  bone("headL","headR",48*s);
-  bone("headL","headC",24*s); bone("headR","headC",24*s);
-  bone("headC","skullBase",40*s);
-  bone("headL","skullBase",Math.hypot(24*s,40*s));
-  bone("headR","skullBase",Math.hypot(24*s,40*s));
-  bone("skullBase","neck",16*s);
-  bone("neck","chest",56*s);
-  bone("shoulderL","shoulderR",144*s);
-  bone("shoulderL","chest",73*s); bone("shoulderR","chest",73*s);
-  bone("chest","pelvis",135*s);
-  bone("hipL","hipR",84*s);
-  bone("pelvis","hipL",43*s); bone("pelvis","hipR",43*s);
-
-  // Additional torso bracing so face/spine remain self-standing.
-  bone("shoulderL","pelvis",Math.hypot(72*s,153*s));
-  bone("shoulderR","pelvis",Math.hypot(72*s,153*s));
-  bone("chest","hipL",Math.hypot(42*s,140*s));
-  bone("chest","hipR",Math.hypot(42*s,140*s));
-
-  // FIXED LENGTH LIMBS — never stretch
-  bone("shoulderL","elbowL",108*s); bone("elbowL","handL",108*s);
-  bone("shoulderR","elbowR",108*s); bone("elbowR","handR",108*s);
-  bone("hipL","kneeL",122*s); bone("kneeL","footL",128*s);
-  bone("hipR","kneeR",122*s); bone("kneeR","footR",128*s);
-
-  rebuildStrings();
-}
-
-function makeString(key,bodyKey){
-  const count=+segmentsEl.value;
-  const target=body[bodyKey];
-
-  const anchor=new Particle(target.x,target.y-235,true,0.25);
-  const particles=[anchor];
-
-  // Per-finger string tuning:
-  // thumbs = shorter -> head sits higher
-  // ring/pinky = longer -> legs do not rise too easily
-  const lengthScale = {
-    Lthumb:0.82, Rthumb:0.82,
-    Lindex:1.00, Rindex:1.00,
-    Lmiddle:1.00, Rmiddle:1.00,
-    Lring:1.85, Rring:1.85,
-    Lpinky:2.15, Rpinky:2.15
-  }[key] || 1.0;
-
-  const straight=Math.max(120,Math.hypot(anchor.x-target.x,anchor.y-target.y));
-  const total=straight*(+slackEl.value/100)*lengthScale;
-  const segLen=total/count;
-
-  // Start close to a hanging line so the rope settles immediately.
-  for(let i=1;i<count;i++){
-    const t=i/count;
-    const sag=Math.sin(Math.PI*t)*18;
-    particles.push(new Particle(
-      anchor.x+(target.x-anchor.x)*t+sag,
-      anchor.y+(target.y-anchor.y)*t
-    ,false,0.22));
-  }
-  return {key,bodyKey,anchor,particles,segLen};
-}
-
-function rebuildStrings(){
-  if(!body.headL)return;
-  strings=[
-    makeString("Lthumb","headC"), makeString("Rthumb","headC"),
-    makeString("Lindex","handL"), makeString("Rindex","handR"),
-    makeString("Lmiddle","elbowL"), makeString("Rmiddle","elbowR"),
-    makeString("Lring","kneeL"), makeString("Rring","kneeR"),
-    makeString("Lpinky","footL"), makeString("Rpinky","footR")
-  ];
-}
-segmentsEl.addEventListener("change",rebuildStrings);
-
-function fingerMap(W,H){
-  return{
-    Lthumb:finger("Left","thumb",W,H),Rthumb:finger("Right","thumb",W,H),
-    Lindex:finger("Left","index",W,H),Rindex:finger("Right","index",W,H),
-    Lmiddle:finger("Left","middle",W,H),Rmiddle:finger("Right","middle",W,H),
-    Lring:finger("Left","ring",W,H),Rring:finger("Right","ring",W,H),
-    Lpinky:finger("Left","pinky",W,H),Rpinky:finger("Right","pinky",W,H)
+function updateControls(){
+  const targets={
+    LI:normalizeBend(rawFingerBend(hands.Left,"index")),
+    LM:normalizeBend(rawFingerBend(hands.Left,"middle")),
+    LR:normalizeBend(rawFingerBend(hands.Left,"ring")),
+    LP:normalizeBend(rawFingerBend(hands.Left,"pinky")),
+    RI:normalizeBend(rawFingerBend(hands.Right,"index")),
+    RM:normalizeBend(rawFingerBend(hands.Right,"middle")),
+    RR:normalizeBend(rawFingerBend(hands.Right,"ring")),
+    RP:normalizeBend(rawFingerBend(hands.Right,"pinky"))
   };
-}
-
-function stabilizeCore(){
-  if(!body.headC || !body.skullBase)return;
-
-  // Anatomical chain:
-  // pelvis -> chest/spine -> neck -> skullBase -> face/headC
-  // Each point may move, but the chain may not disconnect.
-
-  // Pelvis drives the lower end of the spine.
-  body.chest.x += (body.pelvis.x-body.chest.x)*0.020;
-
-  // Keep chest, neck and head on one continuous axis.
-  const spineX = body.chest.x;
-  body.neck.x += (spineX-body.neck.x)*0.12;
-  body.skullBase.x += (body.neck.x-body.skullBase.x)*0.52;
-  body.headC.x += (body.skullBase.x-body.headC.x)*0.46;
-
-  // Skull base stays immediately on top of neck.
-  const targetBaseY = body.neck.y-16;
-  body.skullBase.y += (targetBaseY-body.skullBase.y)*0.42;
-
-  // Head center remains above skull base.
-  const targetHeadY = body.skullBase.y-40;
-  body.headC.y += (targetHeadY-body.headC.y)*0.34;
-
-  // Keep face width rigid-ish and allow only a small tilt.
-  const halfW = 24 * Math.min(
-    canvas.getBoundingClientRect().width,
-    canvas.getBoundingClientRect().height
-  ) / 720;
-
-  let angle=Math.atan2(
-    body.headR.y-body.headL.y,
-    body.headR.x-body.headL.x
-  );
-  angle=Math.max(-0.20,Math.min(0.20,angle));
-
-  const lx=body.headC.x-Math.cos(angle)*halfW;
-  const ly=body.headC.y-Math.sin(angle)*halfW;
-  const rx=body.headC.x+Math.cos(angle)*halfW;
-  const ry=body.headC.y+Math.sin(angle)*halfW;
-
-  body.headL.x+=(lx-body.headL.x)*0.42;
-  body.headL.y+=(ly-body.headL.y)*0.42;
-  body.headR.x+=(rx-body.headR.x)*0.42;
-  body.headR.y+=(ry-body.headR.y)*0.42;
-
-  // Maintain a coherent pelvis/hip block.
-  body.hipL.x += ((body.pelvis.x-42)-body.hipL.x)*0.018;
-  body.hipR.x += ((body.pelvis.x+42)-body.hipR.x)*0.018;
-}
-
-function dampBodyMotion(){
-  const amount=+jointDampingEl.value/100;
-  if(amount<=0)return;
-
-  // Reduce accumulated Verlet velocity of the puppet, especially limbs.
-  const names=[
-    "headC","headL","headR","skullBase","neck","chest","pelvis",
-    "shoulderL","shoulderR","hipL","hipR",
-    "elbowL","elbowR","handL","handR",
-    "kneeL","kneeR","footL","footR"
-  ];
-
-  for(const name of names){
-    const p=body[name];
-    if(!p)continue;
-    const vx=p.x-p.px;
-    const vy=p.y-p.py;
-    p.px=p.x-vx*(1-amount);
-    p.py=p.y-vy*(1-amount);
+  const a=+smoothEl.value/100;
+  for(const k in ctrl){
+    ctrl[k]+= (targets[k]-ctrl[k])*a;
+    $("m"+k).style.width=(ctrl[k]*100).toFixed(0)+"%";
   }
 }
 
-function stabilizePose(){
-  const k=+stabilityEl.value/100;
-  if(!body.pelvis || !body.chest)return;
+function mirrorPoint(p,W,H){return{x:(1-p.x)*W,y:p.y*H}}
 
-  // Keep torso coherent without fixing it in world space.
-  const spineX=(body.pelvis.x+body.chest.x)*0.5;
-  body.chest.x += (spineX-body.chest.x)*0.08*k;
-  body.neck.x += (body.chest.x-body.neck.x)*0.11*k;
-  if(body.skullBase) body.skullBase.x += (body.neck.x-body.skullBase.x)*0.18*k;
-  if(body.headC) body.headC.x += (body.neck.x-body.headC.x)*0.16*k;
-
-  // Keep pelvis level.
-  const hipY=(body.hipL.y+body.hipR.y)*0.5;
-  body.hipL.y += (hipY-body.hipL.y)*0.12*k;
-  body.hipR.y += (hipY-body.hipR.y)*0.12*k;
-
-  // Keep shoulders level.
-  const shoulderY=(body.shoulderL.y+body.shoulderR.y)*0.5;
-  body.shoulderL.y += (shoulderY-body.shoulderL.y)*0.10*k;
-  body.shoulderR.y += (shoulderY-body.shoulderR.y)*0.10*k;
-}
-
-function updatePhysics(dt,W,H){
-  const fm=fingerMap(W,H);
-  const all=Object.values(body);
-  for(const s of strings){
-    const p=fm[s.key];
-    if(p){
-      s.anchor.pinX=p.x;s.anchor.pinY=p.y;
-    }else{
-      // if hand is lost, keep anchor where it last was
-      s.anchor.pinX=s.anchor.x;s.anchor.pinY=s.anchor.y;
-    }
-  }
-
-  // integrate puppet and ropes
-  all.forEach(p=>p.integrate(dt));
-  strings.forEach(s=>s.particles.forEach(p=>p.integrate(dt)));
-
-  // Pelvis / waist control from the center of both palms.
-  updateWaistTarget(W,H);
-  if(waistTarget.ready){
-    const p=body.pelvis;
-    const k=0.025;
-    const dx=waistTarget.x-p.x;
-    const dy=waistTarget.y-p.y;
-
-    // Apply as acceleration-like correction, not a hard position pin.
-    p.x += dx*k;
-    p.y += dy*k;
-
-    // Let hips follow the pelvis as one pelvic unit.
-    body.hipL.x += dx*k*0.78;
-    body.hipL.y += dy*k*0.78;
-    body.hipR.x += dx*k*0.78;
-    body.hipR.y += dy*k*0.78;
-  }
-
-  dampBodyMotion();
-
-  const iterations=+iterationsEl.value;
-  for(let k=0;k<iterations;k++){
-    // rope constraints
-    for(const s of strings){
-      for(let i=0;i<s.particles.length-1;i++){
-        constrainRope(s.particles[i],s.particles[i+1],s.segLen,1);
-      }
-      // Final rope segment can pull the puppet joint but never push it.
-      constrainRope(s.particles[s.particles.length-1],body[s.bodyKey],s.segLen,1);
-    }
-    // bone constraints
-    for(const c of boneConstraints) constrain(c.a,c.b,c.len,1);
-
-    // Maintain anatomical chain and suppress explosive constraint oscillation.
-    stabilizeCore();
-    stabilizePose();
-  }
-
-  // floor
-  const floor=H-18;
-  for(const p of all){
-    if(p.y>floor){p.y=floor}
-    if(p.x<8)p.x=8;if(p.x>W-8)p.x=W-8;
-  }
-}
-
-function drawCamera(W,H){
-  if(!showCamera.checked){ctx.fillStyle="#050608";ctx.fillRect(0,0,W,H);return}
-  ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,W,H);ctx.restore();
-  ctx.fillStyle="rgba(0,0,0,.45)";ctx.fillRect(0,0,W,H);
-}
-
-const connections=[
+const handConnections=[
  [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
  [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]
 ];
+
 function drawHand(side,W,H){
-  if(!showHands.checked||!hands[side])return;
-  const pts=hands[side].map(p=>mirror(p,W,H));
-  ctx.save();ctx.strokeStyle="rgba(255,255,255,.18)";ctx.lineWidth=1.2;
-  for(const [a,b] of connections){ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);ctx.stroke()}
-  ctx.fillStyle="rgba(255,255,255,.9)";
-  for(const i of Object.values(TIP)){const p=pts[i];ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill()}
-  ctx.restore();
-}
-
-function drawStringsFn(){
-  if(!showStrings.checked)return;
-  ctx.save();ctx.strokeStyle="rgba(255,255,255,.45)";ctx.lineWidth=1.15;
-  for(const s of strings){
-    ctx.beginPath();
-    ctx.moveTo(s.particles[0].x,s.particles[0].y);
-    for(let i=1;i<s.particles.length;i++)ctx.lineTo(s.particles[i].x,s.particles[i].y);
-    ctx.lineTo(body[s.bodyKey].x,body[s.bodyKey].y);
-    ctx.stroke();
+  const h=hands[side];
+  if(!showHands.checked||!h)return;
+  const pts=h.map(p=>mirrorPoint(p,W,H));
+  ctx.save();
+  ctx.strokeStyle="rgba(255,255,255,.20)";
+  ctx.lineWidth=1.2;
+  for(const [a,b] of handConnections){
+    ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);ctx.stroke();
   }
+  ctx.fillStyle="rgba(255,255,255,.9)";
+  [8,12,16,20].forEach(i=>{
+    const p=pts[i];ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
+  });
   ctx.restore();
 }
 
-function line(a,b,w){
-  ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(body[a].x,body[a].y);ctx.lineTo(body[b].x,body[b].y);ctx.stroke();
+function drawCamera(W,H){
+  if(!showCamera.checked){
+    ctx.fillStyle="#050608";ctx.fillRect(0,0,W,H);return;
+  }
+  ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,W,H);ctx.restore();
+  ctx.fillStyle="rgba(0,0,0,.43)";ctx.fillRect(0,0,W,H);
 }
-function joint(name,r=7){
-  const p=body[name];ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+function pFromPolar(base,len,ang){
+  return{x:base.x+Math.cos(ang)*len,y:base.y+Math.sin(ang)*len};
 }
 
 function drawPuppet(W,H){
-  const s=Math.min(W,H)/720;
-  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";
-  ctx.strokeStyle="rgba(255,255,255,.97)";ctx.fillStyle="#07080a";
+  const sc=Math.min(W,H)/720;
+  const amp=+motionRangeEl.value/100;
 
-  // strings behind puppet
-  drawStringsFn();
+  const cx=W*.61, headY=H*.26;
+  const headR=40*sc;
+  const neck={x:cx,y:headY+58*sc};
+  const chest={x:cx,y:headY+125*sc};
+  const pelvis={x:cx,y:headY+265*sc};
 
-  // head center is physically constrained to the top of the neck
-  const hx=body.headC.x,hy=body.headC.y;
-  const headR=40*s;
-  ctx.lineWidth=5*s;ctx.beginPath();ctx.arc(hx,hy,headR,0,Math.PI*2);ctx.fill();ctx.stroke();
+  const shoulderL={x:cx-72*sc,y:chest.y};
+  const shoulderR={x:cx+72*sc,y:chest.y};
+  const hipL={x:cx-42*sc,y:pelvis.y};
+  const hipR={x:cx+42*sc,y:pelvis.y};
 
-  // torso
-  line("neck","chest",11*s);line("chest","pelvis",12*s);
-  line("shoulderL","shoulderR",10*s);line("hipL","hipR",10*s);
+  const upperArm=105*sc, foreArm=105*sc;
+  const thigh=122*sc, shin=125*sc;
 
-  // fixed-length arms
-  line("shoulderL","elbowL",13*s);line("elbowL","handL",13*s);
-  line("shoulderR","elbowR",13*s);line("elbowR","handR",13*s);
+  // Neutral: arms slightly down, legs straight.
+  // Index: raises whole hand/forearm target.
+  // Middle: raises elbow specifically.
+  const lBaseElbowAng=Math.PI*.78;
+  const rBaseElbowAng=Math.PI*.22;
 
-  // fixed-length legs
-  line("hipL","kneeL",13*s);line("kneeL","footL",13*s);
-  line("hipR","kneeR",13*s);line("kneeR","footR",13*s);
+  const lElbowLift=ctrl.LM*1.10*amp;
+  const rElbowLift=ctrl.RM*1.10*amp;
+  const lHandLift=ctrl.LI*1.15*amp;
+  const rHandLift=ctrl.RI*1.15*amp;
 
-  // Physical neck connection: neck -> skull base.
-  // This endpoint is constrained to the bottom of the head.
-  ctx.lineWidth=7*s;
-  ctx.beginPath();
-  ctx.moveTo(body.neck.x,body.neck.y);
-  ctx.lineTo(body.skullBase.x,body.skullBase.y);
-  ctx.stroke();
+  const lElbow=pFromPolar(shoulderL,upperArm,lBaseElbowAng-lElbowLift);
+  const rElbow=pFromPolar(shoulderR,upperArm,rBaseElbowAng+rElbowLift);
+
+  const lForeAng=lBaseElbowAng + .10 - lHandLift;
+  const rForeAng=rBaseElbowAng - .10 + rHandLift;
+  const lHand=pFromPolar(lElbow,foreArm,lForeAng);
+  const rHand=pFromPolar(rElbow,foreArm,rForeAng);
+
+  // Ring: raise knee. Pinky: raise entire lower leg/foot.
+  const lKneeLift=ctrl.LR*1.05*amp;
+  const rKneeLift=ctrl.RR*1.05*amp;
+  const lFootLift=ctrl.LP*1.10*amp;
+  const rFootLift=ctrl.RP*1.10*amp;
+
+  const lThighAng=Math.PI/2 + .10 + lKneeLift*.78;
+  const rThighAng=Math.PI/2 - .10 - rKneeLift*.78;
+  const lKnee=pFromPolar(hipL,thigh,lThighAng);
+  const rKnee=pFromPolar(hipR,thigh,rThighAng);
+
+  const lShinAng=Math.PI/2 + .05 + lFootLift*.95;
+  const rShinAng=Math.PI/2 - .05 - rFootLift*.95;
+  const lFoot=pFromPolar(lKnee,shin,lShinAng);
+  const rFoot=pFromPolar(rKnee,shin,rShinAng);
+
+  ctx.save();
+  ctx.lineCap="round";ctx.lineJoin="round";
+  ctx.strokeStyle="rgba(255,255,255,.96)";
+  ctx.fillStyle="#07080a";
+
+  // head
+  ctx.lineWidth=5*sc;
+  ctx.beginPath();ctx.arc(cx,headY,headR,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+  // spine
+  ctx.lineWidth=11*sc;
+  ctx.beginPath();ctx.moveTo(cx,headY+headR);ctx.lineTo(neck.x,neck.y);ctx.lineTo(chest.x,chest.y);ctx.lineTo(pelvis.x,pelvis.y);ctx.stroke();
+
+  // shoulders / pelvis
+  ctx.lineWidth=10*sc;
+  ctx.beginPath();ctx.moveTo(shoulderL.x,shoulderL.y);ctx.lineTo(shoulderR.x,shoulderR.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(hipL.x,hipL.y);ctx.lineTo(hipR.x,hipR.y);ctx.stroke();
+
+  // limbs
+  ctx.lineWidth=13*sc;
+  function limb(a,b,c){
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.stroke();
+  }
+  limb(shoulderL,lElbow,lHand);
+  limb(shoulderR,rElbow,rHand);
+  limb(hipL,lKnee,lFoot);
+  limb(hipR,rKnee,rFoot);
 
   // joints
-  ctx.fillStyle="#07080a";ctx.strokeStyle="#fff";ctx.lineWidth=3*s;
-  ["shoulderL","shoulderR","elbowL","elbowR","handL","handR","hipL","hipR","kneeL","kneeR","footL","footR"].forEach(n=>joint(n,7*s));
+  ctx.fillStyle="#07080a";ctx.strokeStyle="#fff";ctx.lineWidth=3*sc;
+  [shoulderL,shoulderR,lElbow,rElbow,lHand,rHand,hipL,hipR,lKnee,rKnee,lFoot,rFoot].forEach(p=>{
+    ctx.beginPath();ctx.arc(p.x,p.y,7.5*sc,0,Math.PI*2);ctx.fill();ctx.stroke();
+  });
+
   ctx.restore();
 }
 
-function loop(now){
+function loop(){
   if(!running)return;
-  const rect=canvas.getBoundingClientRect(),W=rect.width,H=rect.height;
-  const dt=Math.min(1/30,(now-lastFrame)/1000||1/60);lastFrame=now;
+  const r=canvas.getBoundingClientRect(),W=r.width,H=r.height;
 
   if(!processing && video.readyState>=2){
     processing=true;
     mpHands.send({image:video}).catch(err=>{
-      console.error("hands.send failed:",err);
-      processing=false;
+      console.error(err);processing=false;
     });
   }
+
+  updateControls();
 
   leftStatus.textContent=hands.Left?"TRACKING":"WAIT";
   rightStatus.textContent=hands.Right?"TRACKING":"WAIT";
   dot(leftDot,!!hands.Left);dot(rightDot,!!hands.Right);
 
-  updatePhysics(dt,W,H);
-
-  ctx.clearRect(0,0,W,H);drawCamera(W,H);
-  drawHand("Left",W,H);drawHand("Right",W,H);
+  ctx.clearRect(0,0,W,H);
+  drawCamera(W,H);
+  drawHand("Left",W,H);
+  drawHand("Right",W,H);
   drawPuppet(W,H);
 
   requestAnimationFrame(loop);
