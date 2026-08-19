@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE — UPWARD 2X</title>
+<title>FINGER BEND MARIONETTE — THUMB TILT 5X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -66,13 +66,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <div id="app">
 <aside>
   <h1>FINGER BEND MARIONETTE</h1>
-  <p>MediaPipe Handsで左右8本の指の屈曲率を計算し、その曲がり具合を人形の関節操作へ変換します。人差し指を曲げると手が上がり、中指を曲げると肘が上がります。動作倍率は初期値2.0です。</p>
+  <p>MediaPipe Handsで左右10本の指の屈曲率を計算します。親指を曲げると首が傾き、人差し指で手、中指で肘、薬指で膝、小指で脚を上げます。動作倍率は初期値5.00です。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
   <div class="section">
     <h2>FINGER → ACTION</h2>
     <div class="map">
+      <div><b>親指</b><br>首を傾げる</div>
       <div><b>人差し指</b><br>手を上げる</div>
       <div><b>中指</b><br>肘を上げる</div>
       <div><b>薬指</b><br>膝を上げる</div>
@@ -89,13 +90,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
     <input id="bendStart" type="range" min="5" max="45" value="18">
     <div class="row"><label>BEND MAX</label><output id="maxOut">0.78</output></div>
     <input id="bendMax" type="range" min="45" max="95" value="78">
-    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">2.00</output></div>
-    <input id="motionRange" type="range" min="50" max="250" value="200">
+    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">5.00</output></div>
+    <input id="motionRange" type="range" min="50" max="600" value="500">
   </div>
 
   <div class="section">
     <h2>LIVE BEND</h2>
     <div class="map">
+      <div>L THUMB<div class="meter"><span id="mLT"></span></div></div>
+      <div>R THUMB<div class="meter"><span id="mRT"></span></div></div>
       <div>L INDEX<div class="meter"><span id="mLI"></span></div></div>
       <div>R INDEX<div class="meter"><span id="mRI"></span></div></div>
       <div>L MIDDLE<div class="meter"><span id="mLM"></span></div></div>
@@ -122,14 +125,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
   </div>
 
   <div class="section small">
-    指の屈曲率はMCP/PIP/DIPの角度から計算します。親指は操作には使いません。
+    指の屈曲率は各関節角度から計算します。親指は左右の首傾斜に使います。
   </div>
 </aside>
 
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">OPEN HAND = NEUTRAL ・ INDEX/MIDDLE = UP ・ MOTION ×2</div>
+  <div id="badge">OPEN HAND = NEUTRAL ・ THUMB = NECK TILT ・ MOTION ×5</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -166,6 +169,7 @@ let frameCount=0,fpsClock=performance.now();
 
 const hands={Left:null,Right:null};
 const fingerIds={
+  thumb:[1,2,3,4],
   index:[5,6,7,8],
   middle:[9,10,11,12],
   ring:[13,14,15,16],
@@ -273,16 +277,18 @@ function normalizeBend(v){
 }
 
 const ctrl={
-  LI:0,LM:0,LR:0,LP:0,
-  RI:0,RM:0,RR:0,RP:0
+  LT:0,LI:0,LM:0,LR:0,LP:0,
+  RT:0,RI:0,RM:0,RR:0,RP:0
 };
 
 function updateControls(){
   const targets={
+    LT:normalizeBend(rawFingerBend(hands.Left,"thumb")),
     LI:normalizeBend(rawFingerBend(hands.Left,"index")),
     LM:normalizeBend(rawFingerBend(hands.Left,"middle")),
     LR:normalizeBend(rawFingerBend(hands.Left,"ring")),
     LP:normalizeBend(rawFingerBend(hands.Left,"pinky")),
+    RT:normalizeBend(rawFingerBend(hands.Right,"thumb")),
     RI:normalizeBend(rawFingerBend(hands.Right,"index")),
     RM:normalizeBend(rawFingerBend(hands.Right,"middle")),
     RR:normalizeBend(rawFingerBend(hands.Right,"ring")),
@@ -313,7 +319,7 @@ function drawHand(side,W,H){
     ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);ctx.stroke();
   }
   ctx.fillStyle="rgba(255,255,255,.9)";
-  [8,12,16,20].forEach(i=>{
+  [4,8,12,16,20].forEach(i=>{
     const p=pts[i];ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
   });
   ctx.restore();
@@ -337,8 +343,20 @@ function drawPuppet(W,H){
 
   const cx=W*.61, headY=H*.26;
   const headR=40*sc;
-  const neck={x:cx,y:headY+58*sc};
+
+  // Thumb bending tilts the neck/head.
+  // Left thumb bends -> tilt left, right thumb bends -> tilt right.
+  const thumbTilt=(ctrl.RT-ctrl.LT)*0.42*amp;
+  const neckLen=58*sc;
+
   const chest={x:cx,y:headY+125*sc};
+  const neck={
+    x:chest.x+Math.sin(thumbTilt)*neckLen,
+    y:chest.y-Math.cos(thumbTilt)*neckLen
+  };
+  const headCx=neck.x+Math.sin(thumbTilt)*(headR+10*sc);
+  const headCy=neck.y-Math.cos(thumbTilt)*(headR+10*sc);
+
   const pelvis={x:cx,y:headY+265*sc};
 
   const shoulderL={x:cx-72*sc,y:chest.y};
@@ -393,11 +411,11 @@ function drawPuppet(W,H){
 
   // head
   ctx.lineWidth=5*sc;
-  ctx.beginPath();ctx.arc(cx,headY,headR,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.arc(headCx,headCy,headR,0,Math.PI*2);ctx.fill();ctx.stroke();
 
   // spine
   ctx.lineWidth=11*sc;
-  ctx.beginPath();ctx.moveTo(cx,headY+headR);ctx.lineTo(neck.x,neck.y);ctx.lineTo(chest.x,chest.y);ctx.lineTo(pelvis.x,pelvis.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(headCx,headCy+headR*.72);ctx.lineTo(neck.x,neck.y);ctx.lineTo(chest.x,chest.y);ctx.lineTo(pelvis.x,pelvis.y);ctx.stroke();
 
   // shoulders / pelvis
   ctx.lineWidth=10*sc;
