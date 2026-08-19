@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE — VERTICAL ARMS 7X</title>
+<title>FINGER BEND MARIONETTE — VERTICAL ARMS 9X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -66,7 +66,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <div id="app">
 <aside>
   <h1>FINGER BEND MARIONETTE</h1>
-  <p>MediaPipe Handsで左右10本の指の屈曲率を計算します。親指で首、人差し指で手、中指で肘、薬指で膝、小指で脚を操作します。動作倍率は初期値7.00です。</p>
+  <p>MediaPipe Handsで左右10本の指の屈曲率を計算します。親指で首、人差し指で手、中指で肘、薬指で膝、小指で脚を操作します。動作倍率は初期値9.00です。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -90,8 +90,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
     <input id="bendStart" type="range" min="5" max="45" value="18">
     <div class="row"><label>BEND MAX</label><output id="maxOut">0.78</output></div>
     <input id="bendMax" type="range" min="45" max="95" value="78">
-    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">7.00</output></div>
-    <input id="motionRange" type="range" min="50" max="800" value="700">
+    <div class="row"><label>MOTION RANGE</label><output id="rangeOut">9.00</output></div>
+    <input id="motionRange" type="range" min="50" max="1000" value="900">
   </div>
 
   <div class="section">
@@ -132,7 +132,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">OPEN HAND = ARMS STRAIGHT DOWN ・ FINGER CONTROL ・ MOTION ×7</div>
+  <div id="badge">OPEN HAND = ARMS STRAIGHT DOWN ・ FINGER CONTROL ・ MOTION ×9</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
