@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — CLASSIC HANDS</title>
+<title>PHYSICS MARIONETTE — HEAVY LONG STRING</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -64,7 +64,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <div id="app">
 <aside>
   <h1>PHYSICS MARIONETTE</h1>
-  <p>10本の指先から糸を垂らし、糸の張力と重力で人形を操作します。腕と脚は固定長の骨として扱い、引っ張っても伸びません。</p>
+  <p>10本の指先から長い糸を垂らし、糸の張力と重力で重い人形を操作します。顔と背骨は最初から自立し、腕と脚は固定長で伸びません。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -89,9 +89,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
     <div class="row"><label>GRAVITY</label><output id="gravityOut">0.55</output></div>
     <input id="gravity" type="range" min="0" max="120" value="55">
     <div class="row"><label>DAMPING</label><output id="dampingOut">0.985</output></div>
-    <input id="damping" type="range" min="940" max="998" value="985">
+    <input id="damping" type="range" min="940" max="998" value="992">
     <div class="row"><label>STRING SLACK</label><output id="slackOut">1.18</output></div>
-    <input id="slack" type="range" min="100" max="155" value="118">
+    <input id="slack" type="range" min="110" max="190" value="145">
     <div class="row"><label>STRING SEGMENTS</label><output id="segmentsOut">9</output></div>
     <input id="segments" type="range" min="5" max="14" value="9">
     <div class="row"><label>CONSTRAINTS</label><output id="iterationsOut">8</output></div>
@@ -121,7 +121,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">CLASSIC MEDIAPIPE HANDS ・ 10 FINGERS → PHYSICAL STRINGS</div>
+  <div id="badge">HEAVY PUPPET ・ LONG STRINGS ・ SELF-STANDING CORE</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -253,16 +253,18 @@ function finger(side,name,W,H){
 
 /* -------------------- Verlet physics -------------------- */
 class Particle{
-  constructor(x,y,pinned=false){
+  constructor(x,y,pinned=false,mass=1){
     this.x=x;this.y=y;this.px=x;this.py=y;this.pinned=pinned;this.pinX=x;this.pinY=y;
+    this.mass=mass;
+    this.restX=x;this.restY=y;
   }
   integrate(dt){
     if(this.pinned){this.x=this.pinX;this.y=this.pinY;this.px=this.x;this.py=this.y;return}
     const damp=+dampingEl.value/1000;
     const vx=(this.x-this.px)*damp,vy=(this.y-this.py)*damp;
     this.px=this.x;this.py=this.y;
-    this.x+=vx;
-    this.y+=vy+(+gravityEl.value/100)*dt*dt*60;
+    this.x+=vx/this.mass;
+    this.y+=vy/this.mass+(+gravityEl.value/100)*dt*dt*60/this.mass;
   }
 }
 
@@ -278,7 +280,11 @@ const body={};
 let boneConstraints=[];
 let strings=[];
 
-function addBody(name,x,y,pinned=false){body[name]=new Particle(x,y,pinned);return body[name]}
+// Heavier puppet: body particles react more slowly than rope particles.
+const PUPPET_MASS = 3.2;
+
+
+function addBody(name,x,y,pinned=false){body[name]=new Particle(x,y,pinned,PUPPET_MASS);return body[name]}
 function bone(a,b,len){boneConstraints.push({a:body[a],b:body[b],len})}
 
 function initPuppet(){
@@ -314,6 +320,12 @@ function initPuppet(){
   bone("hipL","hipR",84*s);
   bone("pelvis","hipL",43*s); bone("pelvis","hipR",43*s);
 
+  // Additional torso bracing so face/spine remain self-standing.
+  bone("shoulderL","pelvis",Math.hypot(72*s,153*s));
+  bone("shoulderR","pelvis",Math.hypot(72*s,153*s));
+  bone("chest","hipL",Math.hypot(42*s,140*s));
+  bone("chest","hipR",Math.hypot(42*s,140*s));
+
   // FIXED LENGTH LIMBS — never stretch
   bone("shoulderL","elbowL",108*s); bone("elbowL","handL",108*s);
   bone("shoulderR","elbowR",108*s); bone("elbowR","handR",108*s);
@@ -326,9 +338,10 @@ function initPuppet(){
 function makeString(key,bodyKey){
   const count=+segmentsEl.value;
   const target=body[bodyKey];
-  const anchor=new Particle(target.x,target.y-220,true);
+  // Longer hanging strings: anchor begins much farther above the puppet.
+  const anchor=new Particle(target.x,target.y-380,true);
   const particles=[anchor];
-  const total=Math.max(100,Math.hypot(anchor.x-target.x,anchor.y-target.y))*(+slackEl.value/100);
+  const total=Math.max(180,Math.hypot(anchor.x-target.x,anchor.y-target.y))*(+slackEl.value/100)*1.25;
   const segLen=total/count;
   for(let i=1;i<count;i++){
     particles.push(new Particle(anchor.x,anchor.y+segLen*i));
@@ -356,6 +369,33 @@ function fingerMap(W,H){
     Lring:finger("Left","ring",W,H),Rring:finger("Right","ring",W,H),
     Lpinky:finger("Left","pinky",W,H),Rpinky:finger("Right","pinky",W,H)
   };
+}
+
+function stabilizeCore(){
+  if(!body.headL)return;
+
+  // Soft self-standing posture for head + spine.
+  // The limbs remain free, but the head/neck/chest/pelvis tend to recover their upright alignment.
+  const core = ["headL","headR","neck","chest","pelvis","shoulderL","shoulderR","hipL","hipR"];
+  const stiffness = 0.055;
+
+  for(const name of core){
+    const p=body[name];
+    p.x += (p.restX-p.x)*stiffness/PUPPET_MASS;
+    p.y += (p.restY-p.y)*stiffness/PUPPET_MASS;
+  }
+
+  // Keep head level and spine vertically coherent without pinning them rigidly.
+  const headMidX=(body.headL.x+body.headR.x)/2;
+  const headMidY=(body.headL.y+body.headR.y)/2;
+  body.neck.x += (headMidX-body.neck.x)*0.08;
+  body.chest.x += (body.neck.x-body.chest.x)*0.06;
+  body.pelvis.x += (body.chest.x-body.pelvis.x)*0.05;
+
+  // Prevent face collapse by restoring horizontal head width.
+  const targetHeadY=(body.headL.y+body.headR.y)/2;
+  body.headL.y += (targetHeadY-body.headL.y)*0.18;
+  body.headR.y += (targetHeadY-body.headR.y)*0.18;
 }
 
 function updatePhysics(dt,W,H){
@@ -386,8 +426,8 @@ function updatePhysics(dt,W,H){
     // bone constraints
     for(const c of boneConstraints) constrain(c.a,c.b,c.len,1);
 
-    // loose structural constraints for body orientation
-    // keep shoulder/chest and hip/pelvis coherent through existing bones
+    // Head and spine can stand on their own even before the fingers pull the strings.
+    stabilizeCore();
   }
 
   // floor
