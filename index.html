@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE — CORRECT HAND FOOT 9X</title>
+<title>FINGER BEND MARIONETTE — FOOT ASPECT FIX 9X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -391,12 +391,17 @@ function pFromPolar(base,len,ang){
 
 
 
-function drawPartImage(img,p,size,rotation=0){
+function drawPartImage(img,p,height,rotation=0){
   if(!img || !img.complete || img.naturalWidth===0)return false;
+
+  // Preserve the original PNG aspect ratio.
+  const ratio=img.naturalWidth/img.naturalHeight;
+  const width=height*ratio;
+
   ctx.save();
   ctx.translate(p.x,p.y);
   ctx.rotate(rotation);
-  ctx.drawImage(img,-size/2,-size/2,size,size);
+  ctx.drawImage(img,-width/2,-height/2,width,height);
   ctx.restore();
   return true;
 }
@@ -530,8 +535,9 @@ function drawPuppet(W,H){
   // Correct image mapping:
   // hand.png = pink circular hand
   // foot.png = pink semicircular foot
+  // These are HEIGHTS; widths are calculated from each PNG's original aspect ratio.
   const handSize=46*sc;
-  const footSize=58*sc;
+  const footSize=42*sc;
 
   if(!drawPartImage(puppetHand,lHand,handSize,0)){
     ctx.beginPath();ctx.arc(lHand.x,lHand.y,12*sc,0,Math.PI*2);ctx.fill();ctx.stroke();
