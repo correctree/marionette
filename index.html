@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — HEAD ALIGN FIX</title>
+<title>PHYSICS MARIONETTE — HEAD ON NECK FIX</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -64,7 +64,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <div id="app">
 <aside>
   <h1>PHYSICS MARIONETTE</h1>
-  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。親指の2本の糸は頭部中央を操作します。頭の中心は常に首の真上に固定され、左右へずれません。薬指・小指の糸は長めです。</p>
+  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。頭部下端と首上端を物理的に接続しています。親指の2本の糸は頭部中央を吊り、頭は常に首の上に乗った状態を維持します。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -95,7 +95,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
     <div class="row"><label>STRING SEGMENTS</label><output id="segmentsOut">9</output></div>
     <input id="segments" type="range" min="5" max="14" value="9">
     <div class="row"><label>CONSTRAINTS</label><output id="iterationsOut">8</output></div>
-    <input id="iterations" type="range" min="4" max="16" value="10">
+    <input id="iterations" type="range" min="6" max="18" value="12">
   </div>
 
   <div class="section">
@@ -121,7 +121,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">HEAD LOCKED TO NECK ・ TUNED STRING LENGTHS</div>
+  <div id="badge">HEAD SITS ON NECK ・ RIGID SKULL CONNECTION</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -321,6 +321,7 @@ function initPuppet(){
   addBody("headC",cx,cy);
   addBody("headL",cx-24*s,cy);
   addBody("headR",cx+24*s,cy);
+  addBody("skullBase",cx,cy+40*s);
   addBody("neck",cx,cy+56*s);
   addBody("shoulderL",cx-72*s,cy+105*s);
   addBody("shoulderR",cx+72*s,cy+105*s);
@@ -337,12 +338,14 @@ function initPuppet(){
   addBody("footL",cx-70*s,cy+495*s);
   addBody("footR",cx+70*s,cy+495*s);
 
-  // Head is a rigid unit attached to the neck.
-  // The face center cannot drift sideways away from the neck.
+  // Rigid head + short neck connection.
+  // skullBase is always the bottom of the head and remains attached to neck.
   bone("headL","headR",48*s);
   bone("headL","headC",24*s); bone("headR","headC",24*s);
-  bone("headC","neck",56*s);
-  bone("headL","neck",62*s); bone("headR","neck",62*s);
+  bone("headC","skullBase",40*s);
+  bone("headL","skullBase",Math.hypot(24*s,40*s));
+  bone("headR","skullBase",Math.hypot(24*s,40*s));
+  bone("skullBase","neck",16*s);
   bone("neck","chest",56*s);
   bone("shoulderL","shoulderR",144*s);
   bone("shoulderL","chest",73*s); bone("shoulderR","chest",73*s);
@@ -376,7 +379,7 @@ function makeString(key,bodyKey){
   // thumbs = shorter -> head sits higher
   // ring/pinky = longer -> legs do not rise too easily
   const lengthScale = {
-    Lthumb:0.72, Rthumb:0.72,
+    Lthumb:0.82, Rthumb:0.82,
     Lindex:1.00, Rindex:1.00,
     Lmiddle:1.00, Rmiddle:1.00,
     Lring:1.28, Rring:1.28,
@@ -422,27 +425,45 @@ function fingerMap(W,H){
 }
 
 function stabilizeCore(){
-  if(!body.headC)return;
+  if(!body.headC || !body.skullBase)return;
 
-  // Keep the head center vertically above the neck.
-  // Thumb strings may raise/lower the head, but cannot pull the face off the spine.
-  const desiredHeadX = body.neck.x;
-  body.headC.x += (desiredHeadX-body.headC.x)*0.45;
+  // The neck is the axis of the head.
+  // Do not pin world position: only enforce anatomical alignment.
+  const axisX = body.neck.x;
 
-  // Keep the two sides of the face centered around headC.
-  const halfW = Math.max(1, Math.hypot(body.headR.x-body.headL.x, body.headR.y-body.headL.y)/2);
-  const angle = Math.atan2(body.headR.y-body.headL.y, body.headR.x-body.headL.x);
-  const maxTilt = 0.30;
-  const clampedAngle = Math.max(-maxTilt, Math.min(maxTilt, angle));
+  body.skullBase.x += (axisX-body.skullBase.x)*0.62;
+  body.headC.x += (axisX-body.headC.x)*0.48;
 
-  body.headL.x += (body.headC.x-Math.cos(clampedAngle)*halfW-body.headL.x)*0.38;
-  body.headL.y += (body.headC.y-Math.sin(clampedAngle)*halfW-body.headL.y)*0.38;
-  body.headR.x += (body.headC.x+Math.cos(clampedAngle)*halfW-body.headR.x)*0.38;
-  body.headR.y += (body.headC.y+Math.sin(clampedAngle)*halfW-body.headR.y)*0.38;
+  // The skull base must remain immediately above the neck.
+  const neckGap = 16;
+  if(body.skullBase.y > body.neck.y-4){
+    body.skullBase.y += ((body.neck.y-neckGap)-body.skullBase.y)*0.55;
+  }
 
-  // Spine remains upright but is not pinned in world space.
-  body.chest.x += (body.neck.x-body.chest.x)*0.075;
-  body.pelvis.x += (body.chest.x-body.pelvis.x)*0.055;
+  // Keep face centered on the head axis while allowing a small tilt.
+  const halfW = Math.max(1,Math.hypot(
+    body.headR.x-body.headL.x,
+    body.headR.y-body.headL.y
+  )/2);
+  let angle=Math.atan2(
+    body.headR.y-body.headL.y,
+    body.headR.x-body.headL.x
+  );
+  angle=Math.max(-0.22,Math.min(0.22,angle));
+
+  const lx=body.headC.x-Math.cos(angle)*halfW;
+  const ly=body.headC.y-Math.sin(angle)*halfW;
+  const rx=body.headC.x+Math.cos(angle)*halfW;
+  const ry=body.headC.y+Math.sin(angle)*halfW;
+
+  body.headL.x+=(lx-body.headL.x)*0.38;
+  body.headL.y+=(ly-body.headL.y)*0.38;
+  body.headR.x+=(rx-body.headR.x)*0.38;
+  body.headR.y+=(ry-body.headR.y)*0.38;
+
+  // Upright spine. It can translate and swing, but does not collapse sideways.
+  body.chest.x+=(body.neck.x-body.chest.x)*0.10;
+  body.pelvis.x+=(body.chest.x-body.pelvis.x)*0.07;
 }
 
 function updatePhysics(dt,W,H){
@@ -552,9 +573,13 @@ function drawPuppet(W,H){
   line("hipL","kneeL",13*s);line("kneeL","footL",13*s);
   line("hipR","kneeR",13*s);line("kneeR","footR",13*s);
 
-  // neck to head
+  // Physical neck connection: neck -> skull base.
+  // This endpoint is constrained to the bottom of the head.
   ctx.lineWidth=7*s;
-  ctx.beginPath();ctx.moveTo(body.neck.x,body.neck.y);ctx.lineTo(hx,hy+headR*.6);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(body.neck.x,body.neck.y);
+  ctx.lineTo(body.skullBase.x,body.skullBase.y);
+  ctx.stroke();
 
   // joints
   ctx.fillStyle="#07080a";ctx.strokeStyle="#fff";ctx.lineWidth=3*s;
