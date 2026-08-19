@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — TUNED STRING LENGTHS</title>
+<title>PHYSICS MARIONETTE — HEAD ALIGN FIX</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -64,7 +64,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <div id="app">
 <aside>
   <h1>PHYSICS MARIONETTE</h1>
-  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。親指の糸は短めで頭を高く、薬指・小指の糸は長めで脚がすぐ持ち上がらないよう調整しています。</p>
+  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。親指の2本の糸は頭部中央を操作します。頭の中心は常に首の真上に固定され、左右へずれません。薬指・小指の糸は長めです。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -121,7 +121,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">SHORT THUMB STRINGS ・ LONG LEG STRINGS</div>
+  <div id="badge">HEAD LOCKED TO NECK ・ TUNED STRING LENGTHS</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -318,6 +318,7 @@ function initPuppet(){
   const s=Math.min(W,H)/720,cx=W*.61,cy=H*.34;
   Object.keys(body).forEach(k=>delete body[k]);boneConstraints=[];strings=[];
 
+  addBody("headC",cx,cy);
   addBody("headL",cx-24*s,cy);
   addBody("headR",cx+24*s,cy);
   addBody("neck",cx,cy+56*s);
@@ -336,8 +337,11 @@ function initPuppet(){
   addBody("footL",cx-70*s,cy+495*s);
   addBody("footR",cx+70*s,cy+495*s);
 
-  // head / torso rigid-ish skeleton
+  // Head is a rigid unit attached to the neck.
+  // The face center cannot drift sideways away from the neck.
   bone("headL","headR",48*s);
+  bone("headL","headC",24*s); bone("headR","headC",24*s);
+  bone("headC","neck",56*s);
   bone("headL","neck",62*s); bone("headR","neck",62*s);
   bone("neck","chest",56*s);
   bone("shoulderL","shoulderR",144*s);
@@ -398,7 +402,7 @@ function makeString(key,bodyKey){
 function rebuildStrings(){
   if(!body.headL)return;
   strings=[
-    makeString("Lthumb","headL"), makeString("Rthumb","headR"),
+    makeString("Lthumb","headC"), makeString("Rthumb","headC"),
     makeString("Lindex","handL"), makeString("Rindex","handR"),
     makeString("Lmiddle","elbowL"), makeString("Rmiddle","elbowR"),
     makeString("Lring","kneeL"), makeString("Rring","kneeR"),
@@ -418,21 +422,27 @@ function fingerMap(W,H){
 }
 
 function stabilizeCore(){
-  if(!body.headL)return;
+  if(!body.headC)return;
 
-  // Only maintain an upright core shape.
-  // Do NOT pull the body back to its original vertical position:
-  // limbs and whole body must still fall naturally under gravity.
-  const headMidX=(body.headL.x+body.headR.x)/2;
+  // Keep the head center vertically above the neck.
+  // Thumb strings may raise/lower the head, but cannot pull the face off the spine.
+  const desiredHeadX = body.neck.x;
+  body.headC.x += (desiredHeadX-body.headC.x)*0.45;
 
-  body.neck.x += (headMidX-body.neck.x)*0.055;
-  body.chest.x += (body.neck.x-body.chest.x)*0.045;
-  body.pelvis.x += (body.chest.x-body.pelvis.x)*0.035;
+  // Keep the two sides of the face centered around headC.
+  const halfW = Math.max(1, Math.hypot(body.headR.x-body.headL.x, body.headR.y-body.headL.y)/2);
+  const angle = Math.atan2(body.headR.y-body.headL.y, body.headR.x-body.headL.x);
+  const maxTilt = 0.30;
+  const clampedAngle = Math.max(-maxTilt, Math.min(maxTilt, angle));
 
-  // Keep the face approximately level.
-  const headY=(body.headL.y+body.headR.y)/2;
-  body.headL.y += (headY-body.headL.y)*0.12;
-  body.headR.y += (headY-body.headR.y)*0.12;
+  body.headL.x += (body.headC.x-Math.cos(clampedAngle)*halfW-body.headL.x)*0.38;
+  body.headL.y += (body.headC.y-Math.sin(clampedAngle)*halfW-body.headL.y)*0.38;
+  body.headR.x += (body.headC.x+Math.cos(clampedAngle)*halfW-body.headR.x)*0.38;
+  body.headR.y += (body.headC.y+Math.sin(clampedAngle)*halfW-body.headR.y)*0.38;
+
+  // Spine remains upright but is not pinned in world space.
+  body.chest.x += (body.neck.x-body.chest.x)*0.075;
+  body.pelvis.x += (body.chest.x-body.pelvis.x)*0.055;
 }
 
 function updatePhysics(dt,W,H){
@@ -525,8 +535,8 @@ function drawPuppet(W,H){
   // strings behind puppet
   drawStringsFn();
 
-  // head centered between two physical head particles
-  const hx=(body.headL.x+body.headR.x)/2,hy=(body.headL.y+body.headR.y)/2;
+  // head center is physically constrained to the top of the neck
+  const hx=body.headC.x,hy=body.headC.y;
   const headR=40*s;
   ctx.lineWidth=5*s;ctx.beginPath();ctx.arc(hx,hy,headR,0,Math.PI*2);ctx.fill();ctx.stroke();
 
