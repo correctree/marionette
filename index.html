@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FINGER BEND MARIONETTE — CUSTOM FACE 9X</title>
+<title>FINGER BEND MARIONETTE — SIZE CONTROL 9X</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -92,6 +92,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
     <input id="bendMax" type="range" min="45" max="95" value="78">
     <div class="row"><label>MOTION RANGE</label><output id="rangeOut">9.00</output></div>
     <input id="motionRange" type="range" min="50" max="1000" value="900">
+    <div class="row"><label>BACKGROUND BLUR</label><output id="blurOut">14</output></div>
+    <input id="bgBlur" type="range" min="0" max="30" value="14">
+    <div class="row"><label>PUPPET SIZE</label><output id="puppetSizeOut">1.00</output></div>
+    <input id="puppetSize" type="range" min="50" max="180" value="100">
   </div>
 
   <div class="section">
@@ -149,6 +153,7 @@ puppetFace.src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWMAAAFjCAYAAADowm
 
 
 const smoothEl=$("smooth"),bendStartEl=$("bendStart"),bendMaxEl=$("bendMax"),motionRangeEl=$("motionRange");
+const bgBlurEl=$("bgBlur"), puppetSizeEl=$("puppetSize");
 const showCamera=$("showCamera"),showHands=$("showHands"),swapHands=$("swapHands");
 
 function bind(el,out,scale=100){
@@ -159,6 +164,13 @@ bind(smoothEl,"smoothOut");
 bind(bendStartEl,"startOut");
 bind(bendMaxEl,"maxOut");
 bind(motionRangeEl,"rangeOut");
+const updateBlurOut=()=>{ $("blurOut").textContent=String(+bgBlurEl.value); };
+bgBlurEl.addEventListener("input",updateBlurOut);
+updateBlurOut();
+
+const updatePuppetSizeOut=()=>{ $("puppetSizeOut").textContent=(+puppetSizeEl.value/100).toFixed(2); };
+puppetSizeEl.addEventListener("input",updatePuppetSizeOut);
+updatePuppetSizeOut();
 
 const mpDot=$("mpDot"),camDot=$("camDot"),leftDot=$("leftDot"),rightDot=$("rightDot");
 const mpStatus=$("mpStatus"),camStatus=$("camStatus"),leftStatus=$("leftStatus"),rightStatus=$("rightStatus");
@@ -333,10 +345,26 @@ function drawHand(side,W,H){
 
 function drawCamera(W,H){
   if(!showCamera.checked){
-    ctx.fillStyle="#050608";ctx.fillRect(0,0,W,H);return;
+    ctx.fillStyle="#050608";
+    ctx.fillRect(0,0,W,H);
+    return;
   }
-  ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,W,H);ctx.restore();
-  ctx.fillStyle="rgba(0,0,0,.43)";ctx.fillRect(0,0,W,H);
+
+  const blur=+bgBlurEl.value;
+
+  ctx.save();
+  ctx.filter=`blur(${blur}px)`;
+  ctx.translate(W,0);
+  ctx.scale(-1,1);
+
+  // Slight overscan prevents blurred edges from revealing empty borders.
+  const pad=blur*2.2;
+  ctx.drawImage(video,-pad,-pad,W+pad*2,H+pad*2);
+  ctx.restore();
+
+  ctx.filter="none";
+  ctx.fillStyle="rgba(0,0,0,.34)";
+  ctx.fillRect(0,0,W,H);
 }
 
 function pFromPolar(base,len,ang){
@@ -345,12 +373,13 @@ function pFromPolar(base,len,ang){
 
 
 function drawPuppet(W,H){
-  const sc=Math.min(W,H)/720;
+  const sizeMul=+puppetSizeEl.value/100;
+  const sc=(Math.min(W,H)/720)*sizeMul;
   const amp=+motionRangeEl.value/100;
 
   ctx.save();
 
-  const cx=W*.61, headY=H*.26;
+  const cx=W*.61, headY=H*.26 + (1-sizeMul)*H*.08;
   const headR=40*sc;
 
   // Thumb bending tilts the neck/head.
