@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PHYSICS MARIONETTE — HEAD ON NECK FIX</title>
+<title>PHYSICS MARIONETTE — SPINE & WAIST CONTROL</title>
 <style>
 :root{
   --bg:#07080a; --panel:rgba(17,18,22,.94); --line:#30323a;
@@ -64,7 +64,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <div id="app">
 <aside>
   <h1>PHYSICS MARIONETTE</h1>
-  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。頭部下端と首上端を物理的に接続しています。親指の2本の糸は頭部中央を吊り、頭は常に首の上に乗った状態を維持します。</p>
+  <p>両手を開いた姿勢を基準に、10本の指から人形を吊ります。背骨→首→顔をひと続きの物理骨格として維持します。両手の掌中心の移動で腰（骨盤）を上下左右に操作でき、頭部は首から外れません。</p>
 
   <button id="start" class="primary" disabled>MEDIAPIPE LOADING...</button>
 
@@ -94,6 +94,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
     <input id="slack" type="range" min="100" max="135" value="106">
     <div class="row"><label>STRING SEGMENTS</label><output id="segmentsOut">9</output></div>
     <input id="segments" type="range" min="5" max="14" value="9">
+    <div class="row"><label>WAIST CONTROL</label><output id="waistOut">0.32</output></div>
+    <input id="waistControl" type="range" min="0" max="70" value="32">
     <div class="row"><label>CONSTRAINTS</label><output id="iterationsOut">8</output></div>
     <input id="iterations" type="range" min="6" max="18" value="12">
   </div>
@@ -121,7 +123,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 <main>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="badge">HEAD SITS ON NECK ・ RIGID SKULL CONNECTION</div>
+  <div id="badge">SPINE→NECK→FACE LOCK ・ WAIST CONTROL</div>
   <div id="loading">MEDIAPIPE INITIALIZING...</div>
 </main>
 </div>
@@ -134,7 +136,8 @@ const $=id=>document.getElementById(id);
 const video=$("video"), canvas=$("canvas"), ctx=canvas.getContext("2d");
 const start=$("start");
 const gravityEl=$("gravity"), dampingEl=$("damping"), slackEl=$("slack"),
-      segmentsEl=$("segments"), iterationsEl=$("iterations");
+      segmentsEl=$("segments"), iterationsEl=$("iterations"),
+      waistControlEl=$("waistControl");
 const showCamera=$("showCamera"), showHands=$("showHands"), showStrings=$("showStrings"), swapHands=$("swapHands");
 
 function bind(el,out,fn){const f=()=>$(out).textContent=fn(+el.value);el.addEventListener("input",f);f()}
@@ -143,6 +146,7 @@ bind(dampingEl,"dampingOut",v=>(v/1000).toFixed(3));
 bind(slackEl,"slackOut",v=>(v/100).toFixed(2));
 bind(segmentsEl,"segmentsOut",v=>String(v));
 bind(iterationsEl,"iterationsOut",v=>String(v));
+bind(waistControlEl,"waistOut",v=>(v/100).toFixed(2));
 
 const mpDot=$("mpDot"),camDot=$("camDot"),leftDot=$("leftDot"),rightDot=$("rightDot");
 const mpStatus=$("mpStatus"),camStatus=$("camStatus"),leftStatus=$("leftStatus"),rightStatus=$("rightStatus");
@@ -154,6 +158,12 @@ let mpHands=null,stream=null,running=false,processing=false,lastFrame=performanc
 let frameCount=0,fpsClock=performance.now();
 const hands={Left:null,Right:null};
 const TIP={thumb:4,index:8,middle:12,ring:16,pinky:20};
+
+// Pelvis control target derived from both palms.
+// It is a soft target, not a pin, so the body remains physical.
+let waistTarget={x:null,y:null,ready:false};
+let waistBase={x:null,y:null};
+
 
 function resize(){
   const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
@@ -220,6 +230,8 @@ start.addEventListener("click",async()=>{
     video.srcObject=stream;await video.play();
     running=true;camStatus.textContent="ON";dot(camDot,true);
     start.disabled=true;start.textContent="RUNNING";
+    waistBase={x:null,y:null,ready:false};
+    waistTarget={x:null,y:null,ready:false};
     initPuppet();requestAnimationFrame(loop);
   }catch(err){
     console.error(err);camStatus.textContent="ERROR";
@@ -249,6 +261,41 @@ function updateHandsLegacy(results){
 function finger(side,name,W,H){
   const h=hands[side];if(!h)return null;
   return mirror(h[TIP[name]],W,H);
+}
+
+function palmCenter(side,W,H){
+  const h=hands[side];
+  if(!h)return null;
+  const ids=[0,5,9,13,17];
+  let x=0,y=0;
+  for(const id of ids){
+    const p=mirror(h[id],W,H);
+    x+=p.x; y+=p.y;
+  }
+  return {x:x/ids.length,y:y/ids.length};
+}
+
+function updateWaistTarget(W,H){
+  const L=palmCenter("Left",W,H);
+  const R=palmCenter("Right",W,H);
+  if(!L || !R){
+    waistTarget.ready=false;
+    return;
+  }
+
+  const cx=(L.x+R.x)/2;
+  const cy=(L.y+R.y)/2;
+
+  if(!waistBase.ready){
+    waistBase={x:cx,y:cy,ready:true};
+  }
+
+  // Move pelvis relative to the initial open-hand center.
+  // This keeps the default pose intact when tracking begins.
+  const gain=+waistControlEl.value/100;
+  waistTarget.x=body.pelvis.restX + (cx-waistBase.x)*gain;
+  waistTarget.y=body.pelvis.restY + (cy-waistBase.y)*gain;
+  waistTarget.ready=true;
 }
 
 /* -------------------- Verlet physics -------------------- */
@@ -427,43 +474,52 @@ function fingerMap(W,H){
 function stabilizeCore(){
   if(!body.headC || !body.skullBase)return;
 
-  // The neck is the axis of the head.
-  // Do not pin world position: only enforce anatomical alignment.
-  const axisX = body.neck.x;
+  // Anatomical chain:
+  // pelvis -> chest/spine -> neck -> skullBase -> face/headC
+  // Each point may move, but the chain may not disconnect.
 
-  body.skullBase.x += (axisX-body.skullBase.x)*0.62;
-  body.headC.x += (axisX-body.headC.x)*0.48;
+  // Pelvis drives the lower end of the spine.
+  body.chest.x += (body.pelvis.x-body.chest.x)*0.020;
 
-  // The skull base must remain immediately above the neck.
-  const neckGap = 16;
-  if(body.skullBase.y > body.neck.y-4){
-    body.skullBase.y += ((body.neck.y-neckGap)-body.skullBase.y)*0.55;
-  }
+  // Keep chest, neck and head on one continuous axis.
+  const spineX = body.chest.x;
+  body.neck.x += (spineX-body.neck.x)*0.12;
+  body.skullBase.x += (body.neck.x-body.skullBase.x)*0.52;
+  body.headC.x += (body.skullBase.x-body.headC.x)*0.46;
 
-  // Keep face centered on the head axis while allowing a small tilt.
-  const halfW = Math.max(1,Math.hypot(
-    body.headR.x-body.headL.x,
-    body.headR.y-body.headL.y
-  )/2);
+  // Skull base stays immediately on top of neck.
+  const targetBaseY = body.neck.y-16;
+  body.skullBase.y += (targetBaseY-body.skullBase.y)*0.42;
+
+  // Head center remains above skull base.
+  const targetHeadY = body.skullBase.y-40;
+  body.headC.y += (targetHeadY-body.headC.y)*0.34;
+
+  // Keep face width rigid-ish and allow only a small tilt.
+  const halfW = 24 * Math.min(
+    canvas.getBoundingClientRect().width,
+    canvas.getBoundingClientRect().height
+  ) / 720;
+
   let angle=Math.atan2(
     body.headR.y-body.headL.y,
     body.headR.x-body.headL.x
   );
-  angle=Math.max(-0.22,Math.min(0.22,angle));
+  angle=Math.max(-0.20,Math.min(0.20,angle));
 
   const lx=body.headC.x-Math.cos(angle)*halfW;
   const ly=body.headC.y-Math.sin(angle)*halfW;
   const rx=body.headC.x+Math.cos(angle)*halfW;
   const ry=body.headC.y+Math.sin(angle)*halfW;
 
-  body.headL.x+=(lx-body.headL.x)*0.38;
-  body.headL.y+=(ly-body.headL.y)*0.38;
-  body.headR.x+=(rx-body.headR.x)*0.38;
-  body.headR.y+=(ry-body.headR.y)*0.38;
+  body.headL.x+=(lx-body.headL.x)*0.42;
+  body.headL.y+=(ly-body.headL.y)*0.42;
+  body.headR.x+=(rx-body.headR.x)*0.42;
+  body.headR.y+=(ry-body.headR.y)*0.42;
 
-  // Upright spine. It can translate and swing, but does not collapse sideways.
-  body.chest.x+=(body.neck.x-body.chest.x)*0.10;
-  body.pelvis.x+=(body.chest.x-body.pelvis.x)*0.07;
+  // Maintain a coherent pelvis/hip block.
+  body.hipL.x += ((body.pelvis.x-42)-body.hipL.x)*0.018;
+  body.hipR.x += ((body.pelvis.x+42)-body.hipR.x)*0.018;
 }
 
 function updatePhysics(dt,W,H){
@@ -482,6 +538,25 @@ function updatePhysics(dt,W,H){
   // integrate puppet and ropes
   all.forEach(p=>p.integrate(dt));
   strings.forEach(s=>s.particles.forEach(p=>p.integrate(dt)));
+
+  // Pelvis / waist control from the center of both palms.
+  updateWaistTarget(W,H);
+  if(waistTarget.ready){
+    const p=body.pelvis;
+    const k=0.055;
+    const dx=waistTarget.x-p.x;
+    const dy=waistTarget.y-p.y;
+
+    // Apply as acceleration-like correction, not a hard position pin.
+    p.x += dx*k;
+    p.y += dy*k;
+
+    // Let hips follow the pelvis as one pelvic unit.
+    body.hipL.x += dx*k*0.78;
+    body.hipL.y += dy*k*0.78;
+    body.hipR.x += dx*k*0.78;
+    body.hipR.y += dy*k*0.78;
+  }
 
   const iterations=+iterationsEl.value;
   for(let k=0;k<iterations;k++){
